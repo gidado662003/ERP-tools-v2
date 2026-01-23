@@ -22,6 +22,10 @@ const chatSchema = new mongoose.Schema(
     groupAdmins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     groupMessages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
     groupLastMessage: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+    pinnedMessages: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message"
+    }],
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

@@ -96,12 +96,12 @@ export function SettingDropdown() {
                     setSelectedFile(null);
                     setPreviewUrl(null);
                 }}
-                onSend={async (uploadedUrl) => {
+                onSend={async (uploadedUrl: string, type: string) => {
                     // Send socket message AFTER upload succeeds
                     socket.emit("send_message", {
                         chatId: chatId,
-                        text: "image sent",
-                        type: "image",
+                        text: type === "image" ? "image sent" : type === "video" ? "video sent" : "file sent",
+                        type: type,
                         fileUrl: uploadedUrl, // Use uploaded URL, not blob URL
                         senderId: currentUser?.id,
                     });

@@ -100,7 +100,7 @@ async function getAllusers(req, res) {
       // Combine exclusion with search using $and
       filter = {
         $and: [
-          { _id: { $ne: currentUserId } }, // Always exclude current user
+          { _id: { $ne: currentUserId } },
           {
             $or: [
               { username: { $regex: search, $options: "i" } },

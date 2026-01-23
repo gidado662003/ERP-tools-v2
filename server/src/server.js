@@ -51,6 +51,24 @@ io.on("connection", (socket) => {
     console.log(`User ${socket.id} left chat: ${chatId}`);
   });
 
+  // update pin message
+  socket.on("update_pin", async ({ chatId, messageId, action }) => {
+    try {
+      // Emit to all users in the chat room
+      io.to(chatId).emit("pin_updated", {
+        chatId,
+        messageId,
+        action,
+        timestamp: new Date()
+      });
+
+      console.log(`Message ${messageId} ${action}ned in chat ${chatId}`);
+    } catch (error) {
+      console.error("Pin update error:", error);
+      socket.emit("error", { message: "Failed to update pin status" });
+    }
+  });
+
   // mark as read
   socket.on("mark_as_read", async ({ chatId, userId }) => {
     try {
@@ -66,8 +84,9 @@ io.on("connection", (socket) => {
           $addToSet: { readBy: userObjectId }, // prevent duplicates
         }
       );
-
+      console.log(result)
       // Only notify others if something actually changed
+      console.log("egg")
       if (result.modifiedCount > 0) {
         socket.to(chatId).emit("messages_read", {
           chatId,
@@ -82,7 +101,6 @@ io.on("connection", (socket) => {
 
   // Send message to specific chat room
   socket.on("send_message", async (data) => {
-
     const messageData = {
       text: data.text,
       senderId: data.senderId,
@@ -94,6 +112,7 @@ io.on("connection", (socket) => {
     };
 
     const newMessage = await Message.create(messageData);
+
     // Only update chat document for private/group chats (not global chat)
     if (data.chatId) {
       const chat = await Chat.findById(data.chatId);
@@ -130,6 +149,7 @@ io.on("connection", (socket) => {
           timestamp: messageData.createdAt,
         },
       });
+
     } else {
       // Broadcast to all connected clients for global chat
       io.emit("receive_message", messageData);

@@ -17,6 +17,7 @@ export default function RootLayout({
   const router = useRouter();
   const isAuthPage = pathname === "/login" || pathname === "/signup";
   const isLandingPage = pathname === "/";
+  const notFoundPage = pathname === "/404";
 
   useEffect(() => {
     // Redirect to login if not authenticated and trying to access protected routes

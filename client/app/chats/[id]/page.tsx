@@ -2,12 +2,16 @@
 
 import { useEffect, useState, use, useRef } from "react";
 import { socket } from "../../../lib/socket";
-import { FiSend, FiWifi, FiWifiOff, FiUser, FiPaperclip } from "react-icons/fi";
+import {
+  FiSend, FiWifi, FiWifiOff, FiUser, FiCopy,
+  FiTrash2, FiMaximize2, FiFileText, FiDownload,
+  FiMapPin, FiImage, FiFile, FiVideo,
+  FiPlayCircle
+} from "react-icons/fi";
 import { useSocketStore } from "../../../store/useSocketStore";
-import { getPrivateChatById } from "@/app/api";
+import { getPrivateChatById, getChatMesssages, pinChat } from "@/app/api";
 import { useAuthStore } from "@/lib/store";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AddToGroup } from "@/components/settingModals";
+import { AddToGroup, GroupInfoModal } from "@/components/settingModals";
 import { SettingDropdown } from "@/components/settingDropdDown";
 import {
   DropdownMenu,
@@ -17,8 +21,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ImagePreviewModal } from "@/components/settingModals"
-
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface ChatPageProps {
   params: Promise<{ id: string }>;
@@ -33,14 +42,14 @@ interface User {
 }
 
 interface Message {
-  _id?: string;
+  _id: string;
   text: string;
   senderId: User;
   chatId: string;
   createdAt: string;
   type: string;
   fileUrl: string;
-  fileName: string
+  fileName: string;
   readBy: User[];
 }
 
@@ -50,8 +59,6 @@ interface GroupInfo {
   members: User[];
   admins: User[];
 }
-
-
 
 export default function ChatPage({ params }: ChatPageProps) {
   const { id } = use(params);
@@ -63,22 +70,44 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [user, setUser] = useState<User | null>(null);
   const [chat, setChat] = useState<any>(null);
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
-  const [typing, setTyping] = useState<boolean>(false)
+  const [typing, setTyping] = useState<boolean>(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
-
-
+  const [cursorTimestamp, setCursorTimestamp] = useState<string>("")
+  const [cursorId, setCursorId] = useState("")
   const currentUserId = currentUser?._id ?? "";
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadingOlderMessagesRef = useRef<boolean>(false);
+  const lastMessageIdRef = useRef<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true);
 
-
+  const API_URL = "http://localhost:5000";
 
   useEffect(() => {
     if (!id) return;
-
+    setIsLoading(true);
     const fetchChat = async () => {
       try {
         const response = await getPrivateChatById(id);
+        const messagesData = await getChatMesssages(response.chat._id, cursorTimestamp, cursorId)
         setChat(response.chat);
+        const initialMessages = [...messagesData.data.messages].reverse();
+        setMessages(initialMessages);
+        // Set the last message ID ref for initial load
+        if (initialMessages.length > 0) {
+          lastMessageIdRef.current = initialMessages[initialMessages.length - 1]._id;
+        }
+
+        if (messagesData.data.nextCursor?.timestamp && messagesData.data.nextCursor?.id) {
+          setCursorTimestamp(messagesData.data.nextCursor.timestamp)
+          setCursorId(messagesData.data.nextCursor.id)
+          setHasMoreMessages(messagesData.data.hasMore);
+        } else {
+          setCursorTimestamp("")
+          setCursorId("")
+          setHasMoreMessages(false);
+        }
 
         if (response.chat.type === "group") {
           setUser(null);
@@ -88,314 +117,498 @@ export default function ChatPage({ params }: ChatPageProps) {
             members: response.chat.groupMembers,
             admins: response.chat.groupAdmins,
           });
-          setMessages(response.chat.groupMessages || []);
         } else {
           setUser(response.otherUser);
           setGroupInfo(null);
-          setMessages(response.chat.privateChat || []);
         }
       } catch (error) {
         console.error("Failed to fetch chat:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchChat();
   }, [id]);
 
-  /* ================= SOCKET JOIN / LEAVE ================= */
+  async function handleGetMessages() {
+    if (!chat?._id || isLoading || !scrollContainerRef.current) return;
 
+    isLoadingOlderMessagesRef.current = true;
+
+    const container = scrollContainerRef.current;
+
+    // 1️⃣ Save current scroll height
+    const prevScrollHeight = container.scrollHeight;
+
+    const newMessagesData = await getChatMesssages(
+      chat._id,
+      cursorTimestamp,
+      cursorId
+    );
+
+    if (newMessagesData.data.nextCursor?.timestamp && newMessagesData.data.nextCursor?.id) {
+      setCursorTimestamp(newMessagesData.data.nextCursor.timestamp);
+      setCursorId(newMessagesData.data.nextCursor.id);
+    } else {
+      setHasMoreMessages(false);
+    }
+
+    // 2️⃣ Normalize order (old → new)
+    const olderMessages = [...newMessagesData.data.messages].reverse();
+
+    setMessages((prevMessages) => {
+      const existingIds = new Set(prevMessages.map((m) => m._id));
+      const uniqueOlder = olderMessages.filter(
+        (m: Message) => !existingIds.has(m._id)
+      );
+      return [...uniqueOlder, ...prevMessages];
+    });
+
+    // 3️⃣ Restore scroll position AFTER DOM updates
+    requestAnimationFrame(() => {
+      const newScrollHeight = container.scrollHeight;
+      container.scrollTop += newScrollHeight - prevScrollHeight;
+      isLoadingOlderMessagesRef.current = false;
+    });
+  }
+
+
+  /* ================= SOCKETS ================= */
   useEffect(() => {
     if (!id) return;
-
     socket.emit("join_chat", id);
-
-    return () => {
-      socket.emit("leave_chat", id);
-    };
-  }, [id]);
-
-  /* ================= RECEIVE MESSAGE ================= */
+    socket.emit("mark_as_read", { chatId: id, userId: currentUserId });
+    return () => { socket.emit("leave_chat", id); };
+  }, [id, currentUserId]);
 
   useEffect(() => {
     const handleReceiveMessage = (msg: Message) => {
       if (msg.chatId !== id) return;
-
       setMessages((prev) => [...prev, msg]);
-
-      socket.emit("mark_as_read", {
-        chatId: id,
-        userId: currentUserId,
-      });
+      socket.emit("mark_as_read", { chatId: id, userId: currentUserId });
     };
 
     socket.on("receive_message", handleReceiveMessage);
-
-    return () => {
-      socket.off("receive_message", handleReceiveMessage);
-    };
-  }, [id, currentUserId]);
-
-  /* ================= MARK AS READ ON OPEN ================= */
-
-  useEffect(() => {
-    socket.emit("mark_as_read", {
-      chatId: id,
-      userId: currentUserId,
-    });
+    return () => { socket.off("receive_message", handleReceiveMessage); };
   }, [id, currentUserId]);
 
   useEffect(() => {
-    const handleMessagesRead = ({ chatId, userId }: any) => {
+    const handleMessagesRead = ({ chatId, userId }: { chatId: string; userId: string }) => {
       if (chatId !== id) return;
+      let readingUser = chat?.type === "group"
+        ? groupInfo?.members.find((member) => member._id === userId)
+        : (user?._id === userId ? user : undefined);
 
-      setMessages((prev) =>
-        prev.map((msg) => {
-          const alreadyRead = msg.readBy?.some(
-            (u) => u._id === userId
-          );
+      if (!readingUser) return;
 
-          if (alreadyRead) return msg;
-
-          return {
-            ...msg,
-            readBy: [...(msg.readBy || []), { _id: userId } as any],
-          };
-        })
-      );
+      setMessages((prev) => prev.map((msg) => {
+        if (!msg.readBy?.some((u) => u._id === userId)) {
+          return { ...msg, readBy: [...(msg.readBy || []), readingUser as User] };
+        }
+        return msg;
+      }));
     };
 
     socket.on("messages_read", handleMessagesRead);
+    return () => { socket.off("messages_read", handleMessagesRead); };
+  }, [id, chat, user, groupInfo]);
 
-    return () => {
-      socket.off("messages_read", handleMessagesRead);
-    };
-  }, [id]);
-
-
-  /* ================= Typing ================= */
-  let typingTimeout: NodeJS.Timeout;
   function handleTyping() {
     if (!typing) {
       setTyping(true);
-      socket.emit("typing", {
-        chatId: id,
-        user: currentUser?.username,
-      });
+      socket.emit("typing", { chatId: id, user: currentUser?.username });
     }
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      socket.emit("stop_typing", {
-        chatId: id,
-        userId: currentUser?.username,
-      });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stop_typing", { chatId: id, userId: currentUser?.username });
       setTyping(false);
-    }, 4000);
+    }, 1000);
   }
 
   useEffect(() => {
-    socket.on("user_typing", ({ user }) => {
-      setTypingUser(user)
-    })
-    socket.on("user_stop_typing", () => {
-      setTypingUser(null)
-    })
+    socket.on("user_typing", ({ user }) => setTypingUser(user));
+    socket.on("user_stop_typing", () => setTypingUser(null));
     return () => {
       socket.off("user_typing");
       socket.off("user_stop_typing");
     };
-  }, [])
-
-
-  /* ================= AUTO SCROLL ================= */
+  }, []);
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "instant" });
-  }, [messages]);
 
-  /* ================= SEND MESSAGE ================= */
+    const lastMessage = messages[messages.length - 1];
+    const isNewMessage = lastMessage?._id !== lastMessageIdRef.current;
+
+    if (isNewMessage) {
+      lastMessageIdRef.current = lastMessage?._id || null;
+    }
+
+    // Don't scroll if we're loading older messages
+    if (isLoadingOlderMessagesRef.current) {
+      return;
+    }
+
+    // Scroll to bottom when new messages arrive or typing status changes
+    const scrollToBottom = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollIntoView({ behavior: "instant", block: "end" });
+      }
+    };
+
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      scrollToBottom();
+    });
+  }, [messages, typingUser]);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const sendMessage = () => {
     if (!message.trim()) return;
-
     socket.emit("send_message", {
       chatId: id,
       text: message,
       senderId: currentUserId,
       timestamp: new Date().toISOString(),
     });
-
     setMessage("");
   };
 
   const formatTime = (time: string) =>
-    new Date(time).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-
-
-  // PRIVATE CHAT
-  const getPrivateReadStatus = (msg: Message) => {
-    if (!user) return "Sent";
-
-    const otherUserHasRead = msg.readBy?.some(
-      (u) => u._id === user._id
-    );
-
-    return otherUserHasRead ? "Read" : "Sent";
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
-  // GROUP CHAT
-  const getGroupReadStatus = (msg: Message) => {
-
-    if (!groupInfo) return "";
-
-    const otherMembers = groupInfo.members.filter(
-      (m) => m._id !== currentUserId
-    );
-
-    const readCount =
-      msg.readBy?.filter((u) =>
-        otherMembers.some((m) => m?.toString() === u._id.toString())
-      ).length || 0;
-    if (readCount === 0) return "Sent";
-    if (readCount === otherMembers.length) return "Seen by all";
-
-    return `Seen by ${readCount}`;
+  const getReadStatus = (msg: Message) => {
+    if (chat?.type === "group") {
+      if (!groupInfo) return "";
+      const otherMembers = groupInfo.members.filter((m) => m._id !== currentUserId);
+      const readCount = msg.readBy?.filter((u) => otherMembers.some((m) => m._id === u._id)).length || 0;
+      if (readCount === 0) return "Sent";
+      return readCount === otherMembers.length ? "Seen by all" : `Seen by ${readCount}`;
+    }
+    return msg.readBy?.some((u) => u._id === user?._id) ? "Read" : "Sent";
   };
 
+  const messagePin = async (messageId: string, action: string) => {
+    try {
+      const result = await pinChat(id, messageId, action);
+      socket.emit("update_pin", {
+        chatId: id,
+        messageId: messageId,
+        action: action
+      });
 
+      console.log(result);
+    } catch (error) {
+      console.error("Failed to pin/unpin message:", error);
+    }
+  }
+  useEffect(() => {
+    const handlePinUpdate = async ({ chatId, messageId: _messageId, action: _action }: { chatId: string; messageId: string; action: string }) => {
+      if (chatId === id) {
+        try {
+          const updatedChat = await getPrivateChatById(id);
+          setChat(updatedChat.chat);
+        } catch (error) {
+          console.error("Failed to update pinned messages:", error);
+        }
+      }
+    };
+
+    socket.on("pin_updated", handlePinUpdate);
+
+    return () => {
+      socket.off("pin_updated", handlePinUpdate);
+    };
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center bg-white">
+        <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-gray-500 font-medium animate-pulse">Loading conversation...</p>
+      </div>
+    );
+  }
+  console.log(chat)
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-white overflow-hidden">
       {/* ---------- HEADER ---------- */}
-      <header className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h1 className="font-bold uppercase">
-            {chat?.type === "group"
-              ? groupInfo?.name
-              : user?.username}
-          </h1>
-          <div>
-            Members {chat?.type === "group" && (groupInfo?.members.length)}
+      <header className="flex items-center justify-between p-4 border-b bg-white/95 backdrop-blur-md z-20 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+            {(chat?.type === "group" ? groupInfo?.name : user?.username)?.charAt(0).toUpperCase()}
           </div>
-
-          {chat?.type === "private" && (
-            <div
-              className={`text-xs flex items-center gap-1 ${isConnected ? "text-green-600" : "text-red-600"
-                }`}
-            >
-              {isConnected ? <FiWifi /> : <FiWifiOff />}
-              {isConnected ? "Online" : "Offline"}
+          <div>
+            <h1 className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tight">
+              {chat?.type === "group" ? groupInfo?.name : user?.username}
+            </h1>
+            <div className={`text-[10px] font-semibold flex items-center gap-1 uppercase tracking-widest ${isConnected ? "text-green-600" : "text-red-500"}`}>
+              {isConnected ? <><FiWifi size={12} /> Online</> : <><FiWifiOff size={12} /> Disconnected</>}
             </div>
-          )}
+          </div>
         </div>
 
-        {chat?.type === "group" &&
-          chat.groupAdmins.includes(currentUserId) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger>Open</DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Group</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <AddToGroup chatId={id} />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+        {chat?.type === "group" && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="px-4 py-1.5 text-xs font-bold border rounded-full hover:bg-gray-50 transition-all uppercase tracking-tighter">
+              Settings
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Group Management</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {chat.groupAdmins.includes(currentUserId) && (
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}><AddToGroup chatId={id} /></DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <GroupInfoModal chatId={id} />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </header>
 
-      {/* messages */}
-      <main className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full px-4">
-          <div className="py-4 space-y-4">
+      {/* Pinned chat */}
+
+      {chat?.pinnedMessages && chat.pinnedMessages.length > 0 && (
+        <div className="bg-yellow-50 border-l-4p-4 mb-4">
+
+          <div className="space-y-2">
+            {chat.pinnedMessages.map((pinnedMsg: Message) => (
+              <ContextMenu key={pinnedMsg._id}>
+                <ContextMenuTrigger className="w-full">
+                  <div className="relative group h-[60px] overflow-hidden">
+                    {/* Glass effect background */}
+                    <div className="absolute inset-0  backdrop-blur-md rounded-lg transition-all duration-300 group-hover:from-white/80 group-hover:to-white/60 group-hover:backdrop-blur-sm" />
+
+                    {/* Compact content */}
+                    <div className="relative h-full p-2 rounded-lg border border-white/40 cursor-pointer transition-all duration-300 group-hover:border-gray-300">
+                      <div className="flex items-start h-full gap-2">
+                        {/* Icon based on type */}
+                        <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                          {pinnedMsg.type === "image" ? (
+                            <FiImage className="text-gray-700" size={14} />
+                          ) : pinnedMsg.type === "video" ? (
+                            <FiVideo className="text-gray-700" size={14} />
+                          ) : pinnedMsg.type === "file" ? (
+                            <FiFile className="text-gray-700" size={14} />
+                          ) : (
+                            <span className="text-xs">💬</span>
+                          )}
+                        </div>
+
+                        {/* Text content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-semibold text-gray-800 truncate">
+                              {pinnedMsg.senderId.username}
+                            </span>
+                            <span className="text-[10px] text-gray-600 shrink-0 ml-1">
+                              {new Date(pinnedMsg.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-gray-900 truncate line-clamp-2 leading-tight">
+                            {pinnedMsg.type === "text" ? pinnedMsg.text :
+                              pinnedMsg.type === "image" ? "📷 Image" :
+                                pinnedMsg.type === "video" ? "🎬 Video" :
+                                  pinnedMsg.type === "file" ? `📎 ${pinnedMsg.fileName}` : "Attachment"}
+                          </p>
+                        </div>
+                      </div>
+
+
+                    </div>
+                  </div>
+                </ContextMenuTrigger>
+
+                <ContextMenuContent className="w-48 font-semibold backdrop-blur-lg bg-white/90 border-white/30 shadow-xl">
+                  <ContextMenuItem
+                    onClick={() => copyToClipboard(pinnedMsg.text)}
+                    className="gap-2 hover:bg-white/80 transition-colors"
+                  >
+                    <FiCopy size={14} /> Copy Text
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() => messagePin(pinnedMsg._id, "unpin")}
+                    className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-100/80 focus:text-orange-600 transition-colors"
+                  >
+                    <FiMapPin size={14} /> Unpin Message
+                  </ContextMenuItem>
+                  {pinnedMsg.fileUrl && (
+                    <ContextMenuItem
+                      onClick={() => window.open(`${API_URL}${pinnedMsg.fileUrl}`)}
+                      className="gap-2 hover:bg-white/80 transition-colors"
+                    >
+                      <FiMaximize2 size={14} /> View Original
+                    </ContextMenuItem>
+                  )}
+                </ContextMenuContent>
+              </ContextMenu>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ---------- MESSAGES ---------- */}
+      <main className="flex-1 overflow-hidden bg-slate-50">
+        <div ref={scrollContainerRef} className="h-full overflow-y-auto px-4">
+          <div className="flex justify-center py-4">
+            {hasMoreMessages && (<button
+              onClick={handleGetMessages}
+              className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-blue-500 transition-colors"
+            >
+              Load Older Messages
+            </button>)}
+          </div>
+
+          <div className="pb-10 space-y-6">
             {messages.map((msg) => {
               const isMine = msg.senderId._id === currentUserId;
               return (
-                <div
-                  key={msg._id}
-                  className={`flex ${isMine ? "justify-end" : "justify-start"
-                    }`}
-                >
-                  <div
-                    className={`rounded-xl px-4 py-2 max-w-[70%] ${isMine
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100"
-                      }`}
-                  >
-                    {!isMine && (
-                      <div className="text-[10px] font-bold flex items-center gap-1">
-                        <FiUser /> {msg.senderId.username}
-                      </div>
-                    )}
+                <div key={msg._id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                  <ContextMenu>
+                    <ContextMenuTrigger className="max-w-[85%] sm:max-w-[70%]">
+                      <div className={`relative group rounded-2xl px-4 py-3 shadow-sm ${isMine ? "bg-blue-600 text-white rounded-tr-none" : "bg-white border border-gray-200 rounded-tl-none text-gray-800"
+                        }`}>
 
-                    {msg.type === "image" ? (
-                      <>
-                        <div>
+                        {!isMine && (
+                          <div className="text-[10px] font-black flex items-center gap-1 mb-1 text-blue-600 uppercase tracking-tighter">
+                            <FiUser size={10} /> {msg.senderId.username}
+                          </div>
+                        )}
 
+                        {/* TYPE: IMAGE */}
+                        {msg.type === "image" && (
+                          <div className="mb-2">
+                            <img
+                              src={`${API_URL}${msg.fileUrl}`}
+                              alt={msg.fileName}
+                              className="max-w-full max-h-80 rounded-lg object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                              onClick={() => window.open(`${API_URL}${msg.fileUrl}`)}
+                            />
+                          </div>
+                        )}
+
+                        {/* TYPE: VIDEO */}
+                        {msg.type === "video" && (
+                          <div className="mb-2 relative group/video">
+                            <video
+                              src={`${API_URL}${msg.fileUrl}`}
+                              className="max-w-full max-h-80 rounded-lg shadow-inner"
+                              controls
+                            />
+                          </div>
+                        )}
+
+                        {/* TYPE: FILE */}
+                        {msg.type === "file" && (
+                          <a
+                            href={`${API_URL}${msg.fileUrl}`}
+                            download
+                            className={`flex items-center gap-3 p-3 rounded-xl border mb-2 transition-all no-underline ${isMine ? "bg-blue-700/30 border-blue-400/30 text-white" : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"
+                              }`}
+                          >
+                            <div className={`p-2 rounded-lg ${isMine ? "bg-blue-500" : "bg-gray-200 text-gray-600"}`}>
+                              <FiFileText size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate leading-tight">{msg.fileName}</p>
+                              <p className={`text-[10px] uppercase font-black opacity-60 tracking-tighter`}>Download File</p>
+                            </div>
+                            <FiDownload className="opacity-50" />
+                          </a>
+                        )}
+
+                        {/* TEXT CONTENT */}
+                        {msg.text && (
+                          <p className="text-[14px] leading-relaxed wrap-break-word whitespace-pre-wrap font-medium">
+                            {msg.text}
+                          </p>
+                        )}
+
+                        <div className={`text-[9px] mt-2 flex justify-end items-center gap-1.5 font-bold uppercase tracking-tighter opacity-70`}>
+                          <span>{formatTime(msg.createdAt)}</span>
+                          {isMine && <span>• {getReadStatus(msg)}</span>}
                         </div>
-                        <img
-                          src={`http://localhost:5000${msg.fileUrl}`}
-                          alt={msg.fileName || "Image"}
-                          className="max-w-full max-h-48 rounded-lg object-contain"
-                          onClick={() => window.open(`http://localhost:5000${msg.fileUrl}`)}
-                        />
-                      </>
-                    ) : (
-                      <p>{msg.text}</p>
-                    )}
+                      </div>
+                    </ContextMenuTrigger>
 
-
-
-                    <div className="text-[10px] text-right opacity-70 mt-1">
-                      {isMine &&
-                        (chat?.type === "group"
-                          ? getGroupReadStatus(msg)
-                          : getPrivateReadStatus(msg))}
-                      {" · "}
-                      {formatTime(msg.createdAt)}
-                    </div>
-                  </div>
+                    <ContextMenuContent className="w-48 font-semibold">
+                      <ContextMenuItem onClick={() => copyToClipboard(msg.text)} className="gap-2">
+                        <FiCopy size={14} /> Copy Text
+                      </ContextMenuItem>
+                      {msg.fileUrl && (
+                        <ContextMenuItem onClick={() => window.open(`${API_URL}${msg.fileUrl}`)} className="gap-2">
+                          <FiMaximize2 size={14} /> View Original
+                        </ContextMenuItem>
+                      )}
+                      <ContextMenuItem
+                        onClick={() => {
+                          const isPinned = chat?.pinnedMessages?.some((pinned: Message) => pinned._id === msg._id);
+                          messagePin(msg._id, isPinned ? "unpin" : "pin");
+                        }}
+                        className="gap-2"
+                      >
+                        <FiMapPin size={14} />
+                        {chat?.pinnedMessages?.some((pinned: Message) => pinned._id === msg._id) ? "Unpin Message" : "Pin Message"}
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      {isMine && (
+                        <ContextMenuItem className="gap-2 text-red-500 focus:text-red-500">
+                          <FiTrash2 size={14} /> Delete Message
+                        </ContextMenuItem>
+                      )}
+                    </ContextMenuContent>
+                  </ContextMenu>
                 </div>
               );
             })}
+
             {typingUser && (
-              <p className="text-xs italic text-gray-500">
-                {typingUser} is typing...
-              </p>
+              <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest animate-pulse">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" />
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+                {typingUser} is typing
+              </div>
             )}
-            <div ref={scrollRef} />
+            <div ref={scrollRef} className="h-4" />
           </div>
-        </ScrollArea>
+        </div>
       </main>
 
-
-      <footer className="p-4 border-t bg-white flex items-center gap-3">
-        {/* Attachment Button */}
-        <SettingDropdown />
-
-        {/* Input Field */}
-        <input
-          value={message}
-          onChange={(e) => {
-            setMessage(e.target.value);
-            handleTyping()
-          }}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          className="flex-1 rounded-2xl px-4 py-2.5 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-          placeholder="Write a message..."
-        />
-
-        {/* Send Button */}
-        <button
-          onClick={sendMessage}
-          disabled={!message.trim()}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white p-2.5 rounded-xl transition-colors shadow-sm active:scale-95"
-        >
-          <FiSend size={20} />
-        </button>
+      {/* ---------- FOOTER ---------- */}
+      <footer className="p-4 border-t bg-white z-20">
+        <div className="max-w-5xl mx-auto flex items-center gap-3">
+          <SettingDropdown />
+          <div className="relative flex-1">
+            <input
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                handleTyping();
+              }}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              className="w-full rounded-2xl px-5 py-3 bg-gray-100 border-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+              placeholder="Write a message..."
+            />
+          </div>
+          <button
+            onClick={sendMessage}
+            disabled={!message.trim()}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white p-3.5 rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-90"
+          >
+            <FiSend size={18} />
+          </button>
+        </div>
       </footer>
     </div>
   );

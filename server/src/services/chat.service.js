@@ -115,10 +115,73 @@ async function addUserToGroup(userId, chatId, adderId) {
   return { success: true, message: "User added to group" };
 }
 
+async function pinMessage(chatId, messageId) {
+  try {
+    const message = await Message.findOne({
+      _id: messageId,
+      chatId: chatId
+    });
+
+    if (!message) {
+      throw new Error('Message not found in this chat');
+    }
+
+    const chat = await Chat.findOneAndUpdate(
+      { _id: chatId },
+      { $addToSet: { pinnedMessages: messageId } },
+      { new: true }
+    ).populate({
+      path: "pinnedMessages",
+      select: "text senderId createdAt type fileUrl fileName",
+      populate: {
+        path: "senderId",
+        select: "username avatar"
+      }
+    });
+
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    return chat.pinnedMessages;
+  } catch (error) {
+    console.error('Error pinning message:', error);
+    throw error;
+  }
+}
+
+async function unpinMessage(chatId, messageId) {
+  try {
+    const chat = await Chat.findOneAndUpdate(
+      { _id: chatId },
+      { $pull: { pinnedMessages: messageId } },
+      { new: true }
+    ).populate({
+      path: "pinnedMessages",
+      select: "text senderId createdAt type fileUrl fileName",
+      populate: {
+        path: "senderId",
+        select: "username avatar"
+      }
+    });
+
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    return chat.pinnedMessages;
+  } catch (error) {
+    console.error('Error unpinning message:', error);
+    throw error;
+  }
+}
+
 
 module.exports = {
   getOrCreatePrivateChat,
   createGroup,
   getUserChats,
   addUserToGroup,
+  pinMessage,
+  unpinMessage,
 };

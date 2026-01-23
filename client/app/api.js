@@ -66,7 +66,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.log("Authentication failed - redirecting to login");
+      // console.log("Authentication failed - redirecting to login");
 
       // Redirect to login
       if (typeof window !== "undefined") {
@@ -142,6 +142,16 @@ export async function getPrivateChatById(id) {
   }
 }
 
+export async function getGroupInfo(chatId) {
+  try {
+    const response = await api.get(`/chats/group/${chatId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Get group info error:", error);
+    throw error;
+  }
+}
+
 export async function createGroupChat(groupData) {
   try {
     const response = await api.post("/chats/group", {
@@ -165,6 +175,17 @@ export async function getUserChats(query) {
   }
 }
 
+export async function pinChat(chatId, messageId, action) {
+  try {
+    const response = await api.post("chats/pinMessage", { chatId, messageId, action })
+    return response.data
+  } catch (error) {
+    console.error("Failed to pIn message:", error)
+    throw (error)
+  }
+
+}
+
 // Group API functions
 export async function addUserToGroup(groupData) {
   try {
@@ -182,7 +203,6 @@ export async function addUserToGroup(groupData) {
 export async function uploadFile(file) {
   try {
     const formData = new FormData();
-    console.log("formData:", formData);
     formData.append("file", file);
     const response = await api.post("/chats/upload", formData, {
       headers: {
@@ -193,6 +213,25 @@ export async function uploadFile(file) {
     return response.data;
   } catch (error) {
     console.error("Upload file error:", error);
+    throw error;
+  }
+}
+
+export async function getChatMesssages(chatId, cursorTimestamp, cursorId) {
+  try {
+    const response = await api.post(
+      "/messages",
+      { chatId },
+      {
+        params: {
+          cursorTimestamp: cursorTimestamp || "",
+          cursorId: cursorId || "",
+        },
+      }
+    );
+    return response
+  } catch (error) {
+    console.error("Get message error", error);
     throw error;
   }
 }

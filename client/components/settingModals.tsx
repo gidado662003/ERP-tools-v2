@@ -12,10 +12,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/store";
-import { createGroupChat, getAllusers, addUserToGroup } from "@/app/api";
+import { createGroupChat, getAllusers, addUserToGroup, createOrGetPrivateChat, getGroupInfo } from "@/app/api";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { uploadFile } from "@/app/api";
+
+interface User {
+  _id: string;
+  username: string;
+  email: string;
+  avatar?: string;
+  isOnline?: boolean;
+  joinedRooms: string[];
+}
 
 export function CreateGroupChatModal() {
   const { user } = useAuthStore();
@@ -120,17 +128,14 @@ export function CreateGroupChatModal() {
   );
 }
 
-interface User {
-  _id: string;
-  username: string;
-  email: string;
-}
 
 export function AddToGroup({ chatId }: { chatId: string }) {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingUser, setAddingUser] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
+  console.log(allUsers);
   useEffect(() => {
     fetchUsersForGroup();
   }, []);
@@ -140,7 +145,6 @@ export function AddToGroup({ chatId }: { chatId: string }) {
     try {
 
       const response = await getAllusers();
-
       setAllUsers(response.data?.users || []);
     } catch (error) {
       console.error("AddToGroup: Error fetching users:", error);
@@ -157,10 +161,7 @@ export function AddToGroup({ chatId }: { chatId: string }) {
 
     setAddingUser(userId);
     try {
-
-      const response = await addUserToGroup({ userId, chatId });
-
-
+      await addUserToGroup({ userId, chatId });
       // Remove the user from the list since they're now added
       setAllUsers(prev => prev.filter(user => user._id !== userId));
     } catch (error) {
@@ -169,6 +170,8 @@ export function AddToGroup({ chatId }: { chatId: string }) {
       setAddingUser(null);
     }
   };
+
+
 
   return (
     <Dialog>
@@ -189,13 +192,13 @@ export function AddToGroup({ chatId }: { chatId: string }) {
         </DialogHeader>
 
         <div className="space-y-3">
-          <Input placeholder="Search users..." />
+          <Input placeholder="Search users..." value={search} onChange={(e) => setSearch(e.target.value)} />
 
           <div className="max-h-48 overflow-y-auto space-y-2">
             {loading ? (
               <p className="text-gray-500 text-center py-4">Loading users...</p>
             ) : allUsers.length > 0 ? (
-              allUsers.map((user) => (
+              allUsers.filter((user) => user.username.toLowerCase().includes(search.toLowerCase())).map((user) => (
                 <div
                   key={user._id}
                   className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded"
@@ -209,7 +212,7 @@ export function AddToGroup({ chatId }: { chatId: string }) {
                   </div>
                   <button
                     onClick={() => handleAddUser(user._id)}
-                    disabled={addingUser === user._id}
+                    disabled={addingUser === user._id || user.joinedRooms.includes(chatId)}
                     className="ml-auto px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {addingUser === user._id ? "Adding..." : "Add"}
@@ -231,12 +234,24 @@ export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New c
     imageUrl: string | null;
     isOpen: boolean;
     onClose: () => void;
+    onSend: (uploadedUrl: string, type: string) => void;
+    selectedFile: File | null;
   }) {
   const handleSend = async () => {
     try {
       const response = await uploadFile(selectedFile);
       const uploadedUrl = response.url;
-      onSend(uploadedUrl);
+      let type = "file"; // default
+      if (selectedFile) {
+        if (selectedFile.type.startsWith("image/")) {
+          type = "image";
+        } else if (selectedFile.type.startsWith("video/")) {
+          type = "video";
+        } else {
+          type = "file"; // for documents
+        }
+      }
+      onSend(uploadedUrl, type);
       console.log("response:", response);
     } catch (error) {
       console.error("Failed to upload file:", error);
@@ -279,5 +294,144 @@ export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New c
         </div>
       </DialogContent >
     </Dialog >
+  );
+}
+
+
+export function GroupInfoModal({ chatId }: { chatId: string }) {
+  const router = useRouter();
+  const [groupInfo, setGroupInfo] = useState<any>(null);
+  console.log(chatId);
+  useEffect(() => {
+    fetchGroupInfo();
+  }, []);
+  const fetchGroupInfo = async () => {
+    try {
+      const response = await getGroupInfo(chatId);
+      setGroupInfo(response.group);
+      console.log("group info:", response);
+    } catch (error) {
+      console.error("Failed to fetch group info:", error);
+    }
+  }
+  const goToChat = async (userId: string) => {
+    try {
+      const response = await createOrGetPrivateChat(userId);
+      if (response && response.chat) {
+        router.push(`/chats/${response.chat._id}`);
+      }
+    } catch (error) {
+      console.error("Failed to create/get private chat:", error);
+    }
+  }
+
+  return (
+    <>
+      <Dialog>
+        <DialogTrigger asChild>
+          <button>
+            Group Info
+          </button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          {groupInfo ? (
+            <div className="space-y-6">
+              {/* Group Avatar and Basic Info */}
+              {/* Top Section */}
+              <center>
+                <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  {groupInfo.name?.charAt(0).toUpperCase()}
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">{groupInfo.name}</h3>
+              </center>
+
+              {/* Bottom Section */}
+              <div className="flex items-center gap-4 p-4 rounded-xl border">
+
+                <div className="flex-1">
+
+                  <p className="text-sm text-gray-600 mb-2">
+                    Created {new Date(groupInfo.createdAt).toLocaleDateString()}
+                  </p>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1 text-blue-600 font-medium">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      {groupInfo.memberCount} members
+                    </span>
+                    <span className="flex items-center gap-1 text-green-600 font-medium">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      {groupInfo.admins?.length || 0} admins
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {groupInfo.description && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Description</h4>
+                  <p className="text-gray-800 leading-relaxed">{groupInfo.description}</p>
+                </div>
+              )}
+
+              {/* Admins Section */}
+              {groupInfo.admins && groupInfo.admins.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-green-500 rounded-full"></span>
+                    Group Admins ({groupInfo.admins.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {groupInfo.admins.map((admin: User) => (
+                      <div key={admin._id} className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {admin.username?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800">{admin.username}</p>
+                          <p className="text-xs text-green-600 font-medium">Administrator</p>
+                        </div>
+                        <div className={`w-3 h-3 rounded-full ${admin.isOnline ? 'bg-green-400' : 'bg-gray-300'}`}></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Members Section */}
+              {groupInfo.members && groupInfo.members.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+                    Group Members ({groupInfo.members.length})
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {groupInfo.members.map((member: User) => (
+                      <div onClick={() => goToChat(member._id)} key={member._id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {member.username?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800">{member.username}</p>
+                          <p className="text-xs text-gray-500">{member.email}</p>
+                        </div>
+                        <div className={`w-3 h-3 rounded-full ${member.isOnline ? 'bg-green-400' : 'bg-gray-300'}`}></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-gray-600">Loading group information...</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
