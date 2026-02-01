@@ -1,57 +1,3 @@
-// import axios from "axios";
-
-// // Create axios instance with default config
-// const api = axios.create({
-//   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002/api",
-//   headers: {
-//     "Content-Type": "application/json",
-//   },
-// });
-
-// // Request interceptor to add auth token if available
-// api.interceptors.request.use(
-//   (config) => {
-//     // You can add auth token logic here later
-//     // const token = localStorage.getItem('token');
-//     // if (token) {
-//     //   config.headers.Authorization = `Bearer ${token}`;
-//     // }
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
-
-// // Response interceptor for error handling
-// api.interceptors.response.use(
-//   (response) => {
-//     return response;
-//   },
-//   (error) => {
-//     // Handle common errors here
-//     if (error.response?.status === 401) {
-//       // Handle unauthorized access
-//       console.error("Unauthorized access");
-//     }
-//     return Promise.reject(error);
-//   }
-// );
-
-// // API methods for your chat app
-// export const authAPI = {
-//   login: (credentials) => api.post("/user/login", credentials),
-//   signup: (userData) => api.post("/user/signup", userData),
-//   // Add more auth methods as needed
-// };
-
-// export const userAPI = {
-//   getProfile: () => api.get("/user/profile"),
-//   updateProfile: (data) => api.put("/user/profile", data),
-// };
-
-// export default api;
-
 import axios from "axios";
 
 const api = axios.create({
@@ -70,7 +16,7 @@ api.interceptors.response.use(
 
       // Redirect to login
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        window.location.href = "/chat/login";
       }
     }
     return Promise.reject(error);
@@ -232,6 +178,26 @@ export async function getChatMesssages(chatId, cursorTimestamp, cursorId) {
     return response
   } catch (error) {
     console.error("Get message error", error);
+    throw error;
+  }
+}
+
+export async function deleteMessage(messageId) {
+  try {
+    const response = await api.put("/messages/delete", { messageId });
+    return response.data;
+  } catch (error) {
+    console.error("Delete message error:", error);
+    throw error;
+  }
+}
+
+export async function isAuthenticated() {
+  try {
+    const response = await api.get("/user/is-authenticated", { withCredentials: true });
+    return response.data;
+  } catch (error) {
+    console.error("Is authenticated error:", error);
     throw error;
   }
 }

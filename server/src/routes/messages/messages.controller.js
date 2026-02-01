@@ -1,4 +1,4 @@
-const { getMessages } = require("../../services/message.service")
+const { getMessages, deleteMessage } = require("../../services/message.service")
 async function getChatMessagescontroller(req, res) {
     try {
 
@@ -27,4 +27,14 @@ async function getChatMessagescontroller(req, res) {
     }
 }
 
-module.exports = { getChatMessagescontroller }
+async function deleteMessageController(req, res) {
+    try {
+        const { messageId } = req.body;
+        const message = await deleteMessage(messageId);
+        res.status(200).json(message);
+    } catch (error) {
+        console.error('error')
+        res.status(500).json("Error deleting message")
+    }
+}
+module.exports = { getChatMessagescontroller, deleteMessageController }

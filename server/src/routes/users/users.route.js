@@ -4,6 +4,7 @@ const {
   getAllusers,
   getUserById,
   loginUser,
+  isAuthenticated,
 } = require("./users.controller");
 const authMiddleware = require("../../middleware/authMiddleware");
 
@@ -16,5 +17,7 @@ route.post("/login", loginUser);
 // Protected routes (authentication required)
 route.get("/", authMiddleware, getAllusers);
 route.get("/:id", authMiddleware, getUserById);
+
+route.get("/is-authenticated", authMiddleware, isAuthenticated);
 
 module.exports = route;

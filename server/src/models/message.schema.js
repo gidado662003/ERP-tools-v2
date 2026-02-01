@@ -13,6 +13,7 @@ const messageSchema = new mongoose.Schema(
       ref: "Chat",
       required: true,
     },
+    isDeleted: { type: Boolean, default: false },
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     type: { type: String, enum: ["text", "image", "file"], default: "text" },
     fileUrl: { type: String },

@@ -18,4 +18,8 @@ async function getMessages(chatId, cursorTimestamp, cursorId, limit) {
         .limit(limit ? parseInt(limit) : 50)
     return messages;
 }
-module.exports = { getMessages }
+async function deleteMessage(messageId) {
+    const message = await Message.findByIdAndUpdate(messageId, { isDeleted: true });
+    return message;
+}
+module.exports = { getMessages, deleteMessage }

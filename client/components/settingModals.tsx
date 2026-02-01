@@ -74,7 +74,7 @@ export function CreateGroupChatModal() {
 
       setSuccess("Group created successfully");
       // Redirect to the new group chat - server returns { group }
-      router.push(`/chats/${response.group._id}`);
+      router.push(`chat/chats/${response.group._id}`);
       setOpen(false);
     } catch (error) {
       console.error("Failed to create group:", error);

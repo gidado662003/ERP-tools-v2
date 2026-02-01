@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { socket } from "../../lib/socket";
+import { socket } from "../../../../lib/socket";
 import { FiSend, FiWifi, FiWifiOff, FiClock, FiUser } from "react-icons/fi";
-import { useSocketStore } from "../../store/useSocketStore";
+import { useSocketStore } from "../../../../store/useSocketStore";
 import { useAuthStore } from "@/lib/store";
 interface Message {
   text: string;
@@ -60,9 +60,8 @@ function Chat() {
             <h1 className="font-bold text-gray-800">Global Chat Room</h1>
             <div className="flex items-center gap-2">
               <div
-                className={`flex items-center gap-1 text-sm ${
-                  isConnected ? "text-green-600" : "text-red-600"
-                }`}
+                className={`flex items-center gap-1 text-sm ${isConnected ? "text-green-600" : "text-red-600"
+                  }`}
               >
                 {isConnected ? (
                   <FiWifi className="text-sm" />
@@ -102,22 +101,19 @@ function Chat() {
               return (
                 <div
                   key={i}
-                  className={`flex ${
-                    isCurrentUser ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
+                    }`}
                 >
                   <div
-                    className={`max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-3 ${
-                      isCurrentUser
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-none"
-                        : "bg-gray-100 text-gray-800 rounded-bl-none"
-                    }`}
+                    className={`max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-3 ${isCurrentUser
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-none"
+                      : "bg-gray-100 text-gray-800 rounded-bl-none"
+                      }`}
                   >
                     {/* Sender info */}
                     <div
-                      className={`flex items-center gap-2 mb-1 ${
-                        isCurrentUser ? "text-blue-100" : "text-gray-500"
-                      }`}
+                      className={`flex items-center gap-2 mb-1 ${isCurrentUser ? "text-blue-100" : "text-gray-500"
+                        }`}
                     >
                       <FiUser className="text-sm" />
                       <span className="text-xs font-medium">
@@ -132,9 +128,8 @@ function Chat() {
 
                     {/* Timestamp */}
                     <div
-                      className={`flex items-center gap-1 text-xs ${
-                        isCurrentUser ? "text-blue-200" : "text-gray-400"
-                      }`}
+                      className={`flex items-center gap-1 text-xs ${isCurrentUser ? "text-blue-200" : "text-gray-400"
+                        }`}
                     >
                       <FiClock className="text-xs" />
                       <span>{formatTime(msg.timestamp)}</span>
@@ -169,11 +164,10 @@ function Chat() {
           <button
             onClick={sendMessage}
             disabled={!isConnected || !message.trim()}
-            className={`px-6 rounded-full font-medium transition-all duration-200 flex items-center gap-2 ${
-              !isConnected || !message.trim()
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
-            }`}
+            className={`px-6 rounded-full font-medium transition-all duration-200 flex items-center gap-2 ${!isConnected || !message.trim()
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
+              }`}
           >
             <FiSend className="text-lg" />
             <span className="hidden sm:inline">Send</span>

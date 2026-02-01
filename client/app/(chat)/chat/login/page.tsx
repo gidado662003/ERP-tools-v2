@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
-import { authAPI } from "../api";
-import { useAuthStore } from "../../lib/store";
+import { authAPI, isAuthenticated } from "../../../api";
+import { useAuthStore } from "../../../../lib/store";
+import { AxiosError } from "axios";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,13 +20,13 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
@@ -33,9 +34,9 @@ export default function LoginPage() {
     try {
       const res = await authAPI.login(formData);
       setUser(res.user);
-      router.push("/chats");
+      router.replace("/chat/chats");
     } catch (err) {
-      setError(err?.response?.data?.error || "Login failed");
+      setError(err instanceof AxiosError ? err.response?.data?.error || "Login failed" : "Login failed");
     } finally {
       setIsLoading(false);
     }

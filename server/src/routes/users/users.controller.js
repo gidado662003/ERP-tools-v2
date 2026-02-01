@@ -65,9 +65,10 @@ async function loginUser(req, res) {
       expiresIn: "1h",
     });
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 3600000,
+      httpOnly: true,                                  // Prevents XSS (JavaScript access)
+      secure: false,   // Only sends over HTTPS                            // Protects against CSRF
+      maxAge: 3600000,                                // 1 hour in milliseconds
+      path: "/",                                      // Ensures cookie is available on all routes
     });
     const userResponse = {
       id: user._id,
@@ -80,6 +81,14 @@ async function loginUser(req, res) {
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+async function isAuthenticated(req, res) {
+  try {
+    return res.status(200).json({ message: "Authenticated" });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -158,4 +167,4 @@ async function getUserById(req, res) {
   }
 }
 
-module.exports = { createUser, getAllusers, getUserById, loginUser };
+module.exports = { createUser, getAllusers, getUserById, loginUser, isAuthenticated };
