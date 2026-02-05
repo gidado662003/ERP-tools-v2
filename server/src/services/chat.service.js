@@ -76,9 +76,9 @@ async function getUserChats(userId, search) {
     .populate("groupMembers", "username avatar")
     .populate({
       path: "privateLastChat",
-      select: "readBy text senderId createdAt type fileUrl fileName"
+      select: "readBy text senderId createdAt type fileUrl fileName isDeleted"
     })
-    .populate("groupLastMessage", "readBy text senderId createdAt type fileUrl fileName")
+    .populate("groupLastMessage", "readBy text senderId createdAt type fileUrl fileName isDeleted")
     .sort({ updatedAt: -1 });
 }
 

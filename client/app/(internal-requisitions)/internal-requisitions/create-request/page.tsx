@@ -6,6 +6,7 @@ import RequisitionItems from '@/components/internal-requsitions/request-items'
 import { CreateRequisitionPayload } from "@/lib/internalRequestTypes"
 import RequestPreview from "@/components/internal-requsitions/request-preview"
 import { internlRequestAPI } from '@/lib/internalRequestApi'
+import { toast } from 'sonner'
 function page() {
     const [currentStep, setCurrentStep] = useState(1)
     const [formData, setFormData] = useState<CreateRequisitionPayload>({
@@ -21,6 +22,7 @@ function page() {
         items: [],
         attachement: []
     })
+    console.log('formData', formData)
     const handleNextStep = () => {
         setCurrentStep(currentStep + 1)
     }
@@ -29,6 +31,12 @@ function page() {
     }
     const handleCreateRequest = async () => {
         const res = await internlRequestAPI.createRequest(formData)
+        if (res.status === 201) {
+            toast.success('Request created successfully')
+            setCurrentStep(1)
+        } else {
+            toast.error('Failed to create request')
+        }
         setFormData({
             title: '',
             location: '',
@@ -42,8 +50,7 @@ function page() {
             items: [],
             attachement: []
         })
-        alert('Request created successfully')
-        setCurrentStep(1)
+        toast.success('Request created successfully')
     }
     return (
         <div>

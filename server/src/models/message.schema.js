@@ -15,10 +15,27 @@ const messageSchema = new mongoose.Schema(
     },
     isDeleted: { type: Boolean, default: false },
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    type: { type: String, enum: ["text", "image", "file"], default: "text" },
+    type: { type: String, enum: ["text", "image", "file","video"], default: "text" },
     fileUrl: { type: String },
     fileName: { type: String },
     fileSize: { type: Number },
+    // Forwarded message fields
+    forwardedMessage: { type: Boolean, default: false },
+    forwardedFrom: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+    originalSender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    originalChatId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chat",
+      default: null,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

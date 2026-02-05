@@ -12,9 +12,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/store";
-import { createGroupChat, getAllusers, addUserToGroup, createOrGetPrivateChat, getGroupInfo } from "@/app/api";
+import { createGroupChat, getAllusers, addUserToGroup, createOrGetPrivateChat, getGroupInfo,getUserChats } from "@/app/api";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/app/api";
+import { socket } from "@/lib/socket";
 
 interface User {
   _id: string;
@@ -135,7 +136,7 @@ export function AddToGroup({ chatId }: { chatId: string }) {
   const [addingUser, setAddingUser] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  console.log(allUsers);
+
   useEffect(() => {
     fetchUsersForGroup();
   }, []);
@@ -252,7 +253,7 @@ export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New c
         }
       }
       onSend(uploadedUrl, type);
-      console.log("response:", response);
+
     } catch (error) {
       console.error("Failed to upload file:", error);
     }
@@ -301,7 +302,7 @@ export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New c
 export function GroupInfoModal({ chatId }: { chatId: string }) {
   const router = useRouter();
   const [groupInfo, setGroupInfo] = useState<any>(null);
-  console.log(chatId);
+
   useEffect(() => {
     fetchGroupInfo();
   }, []);
@@ -309,7 +310,6 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
     try {
       const response = await getGroupInfo(chatId);
       setGroupInfo(response.group);
-      console.log("group info:", response);
     } catch (error) {
       console.error("Failed to fetch group info:", error);
     }
@@ -318,7 +318,7 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
     try {
       const response = await createOrGetPrivateChat(userId);
       if (response && response.chat) {
-        router.push(`/chats/${response.chat._id}`);
+        router.push(`/${response.chat._id}`);
       }
     } catch (error) {
       console.error("Failed to create/get private chat:", error);
@@ -433,5 +433,160 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+
+interface Chat {
+  _id: string;
+  name?: string;
+  type: "private" | "group";
+  members?: User[];
+}
+
+interface Chat {
+  _id: string;
+  groupName?: string;
+  type: "private" | "group";
+  participants?: User[];
+  groupMembers?: User[];
+}
+
+interface Message {
+  _id: string;
+  text: string;
+  senderId: User;
+  chatId: string;
+  createdAt: string;
+  type: string;
+  fileUrl: string;
+  fileName: string;
+  readBy: User[];
+  isDeleted?: boolean;
+  forwardedMessage?: boolean;
+}
+export function ForwardeMessageModal({ messageToForward }: { messageToForward: Message }) {
+  const [chatList, setChatList] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [forwarding, setForwarding] = useState(false);
+  const [search, setSearch] = useState("");
+  const { user: currentUser } = useAuthStore();
+  const router = useRouter();
+  console.log("Message to forward:", messageToForward);
+console.log("Current user:", currentUser);
+  useEffect(() => {
+    fetchChats();
+  }, []);
+
+  const fetchChats = async () => {
+    try {
+      const response = await getUserChats("");
+      setChatList(response.data?.chats || response.chats || []);
+    } catch (error) {
+      console.error("Fetch chats error:", error);
+    }
+  }
+
+  const handleForwardMessage = async (chatId: string) => {
+    setForwarding(true);
+    try {
+      socket.emit("send_message", {
+        chatId: chatId,
+        text: messageToForward.text,
+        type: messageToForward.type,
+        fileUrl: messageToForward.fileUrl ||"",
+        fileName: messageToForward.fileName || "",
+        senderId: currentUser?._id,
+        timestamp: new Date().toISOString(),
+         forwardedFrom: messageToForward._id,
+      originalSender: messageToForward.senderId,
+      originalChatId: messageToForward.chatId,
+      forwardedMessage:true
+      });
+
+      router.push(`/chat/chats/${chatId}`);
+    } catch (error) {
+      console.error("Failed to forward message:", error);
+    } finally {
+      setForwarding(false);
+    }
+  }
+
+  const getChatDisplayName = (chat: Chat): string => {
+    if (chat.type === "group") {
+      return chat.groupName || "Group Chat";
+    } else {
+      // For private chat, find the other participant's name
+      const otherParticipant = chat.participants?.find(p => p._id !== currentUser?._id);
+      return otherParticipant?.username || "Private Chat";
+    }
+  }
+
+  const getMemberCount = (chat: Chat): number => {
+    if (chat.type === "group") {
+      return chat.groupMembers?.length || 0;
+    } else {
+      return chat.participants?.length || 2;
+    }
+  }
+
+  const filteredChats = chatList.filter((chat) =>
+    getChatDisplayName(chat).toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button>Forward message</button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Forward Message</DialogTitle>
+          <DialogDescription>
+            Select a chat to forward this message to.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input 
+            placeholder="Search chats..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="max-h-48 overflow-y-auto space-y-2">
+            {filteredChats.length > 0 ? (
+              filteredChats.map((chat) => (
+                <div
+                  key={chat._id}
+                  className="flex items-center justify-between p-2 hover:bg-gray-100 rounded"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                      {getChatDisplayName(chat)?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800">
+                        {getChatDisplayName(chat)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {chat.type === "group" ? `${getMemberCount(chat)} members` : "Private chat"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleForwardMessage(chat._id)}
+                    disabled={forwarding}
+                  >
+                    {forwarding ? "Forwarding..." : "Forward"}
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-4">No chats found</p>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

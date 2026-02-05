@@ -63,7 +63,9 @@ function RequisitionListContent() {
         })
 
         setData(responce?.data)
+
         setListCount(responce?.counts)
+
         setHasMore(responce?.hasMore)
         setCursorId(responce?.nextCursor?.id ?? "");
         setCursorTimeStamp(responce?.nextCursor?.timestamp)

@@ -45,7 +45,7 @@ export type PaymentHistory = {
 export type InternalRequisition = {
   paymentMethod: string | null;
   bank: string | null;
-  referenceNumber: string | null;
+  referenceNumber: number | null;
   amountPaid: number;
   paymentType: string | null;
   _id: string;

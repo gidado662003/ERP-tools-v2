@@ -5,14 +5,14 @@ import { socket } from "../../../../../lib/socket";
 import {
   FiSend, FiWifi, FiWifiOff, FiUser, FiCopy,
   FiTrash2, FiMaximize2, FiFileText, FiDownload,
-  FiMapPin, FiImage, FiFile, FiVideo, FiPhoneCall, FiMoreVertical
+  FiMapPin, FiImage, FiFile, FiVideo, FiPhoneCall, FiMoreVertical,FiPhoneForwarded
 } from "react-icons/fi";
 import { useSocketStore } from "../../../../../store/useSocketStore";
 import { getPrivateChatById, getChatMesssages, pinChat, deleteMessage } from "@/app/api";
 import { useAuthStore } from "@/lib/store";
 import { AddToGroup, GroupInfoModal } from "@/components/settingModals";
 import { SettingDropdown } from "@/components/settingDropdDown";
-
+import {ForwardeMessageModal} from "@/components/settingModals"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,7 @@ interface Message {
   fileName: string;
   readBy: User[];
   isDeleted?: boolean;
+  forwardedMessage?: boolean;
 }
 
 interface GroupInfo {
@@ -82,8 +83,40 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  
+  const API_URL = "http://10.10.253.3:5001";
 
-  const API_URL = "http://localhost:5000";
+  useEffect(() => {
+    if (chat?.type === "group") {
+      const lastAtIndex = message.lastIndexOf("@");
+      
+      if (lastAtIndex !== -1) {
+        const textAfterAt = message.slice(lastAtIndex + 1);
+        const hasSpace = textAfterAt.includes(" ");
+        
+        if (!hasSpace) {
+          setMentionQuery(textAfterAt.toLowerCase());
+          setIsMentionOpen(true);
+        } else {
+          setIsMentionOpen(false);
+          setMentionQuery("");
+        }
+      } else {
+        setIsMentionOpen(false);
+        setMentionQuery("");
+      }
+    } else {
+      setIsMentionOpen(false);
+      setMentionQuery("");
+    }
+  }, [message, chat?.type]);
+
+  // Filter participants based on search
+  const filteredParticipants = chat?.participants?.filter((part: any) =>
+    part.username.toLowerCase().includes(mentionQuery)
+  ) || [];
 
   // Grouping Logic
   const getDateKey = (isoDate: string) => {
@@ -302,7 +335,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    const textToCopy = text
+    navigator.clipboard.writeText(textToCopy);
   };
 
   const getReadStatus = (msg: Message) => {
@@ -439,6 +473,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-48 font-semibold backdrop-blur-lg bg-white/90 border-white/30 shadow-xl">
+               
                   <ContextMenuItem onClick={() => copyToClipboard(pinnedMsg.text)} className="gap-2"><FiCopy size={14} /> Copy Text</ContextMenuItem>
                   <ContextMenuItem onClick={() => messagePin(pinnedMsg._id, "unpin")} className="gap-2 text-orange-600"><FiMapPin size={14} /> Unpin Message</ContextMenuItem>
                   {pinnedMsg.fileUrl && <ContextMenuItem onClick={() => window.open(`${API_URL}${pinnedMsg.fileUrl}`)} className="gap-2"><FiMaximize2 size={14} /> View Original</ContextMenuItem>}
@@ -471,55 +506,120 @@ export default function ChatPage({ params }: ChatPageProps) {
                 </div>
 
                 {dayMessages.map((msg) => {
-                  const isMine = msg.senderId._id === currentUserId;
+                  const isMine = msg.senderId?._id === currentUserId;
+            
                   return (
                     <div key={msg._id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                       <ContextMenu>
-                        <ContextMenuTrigger className="max-w-[85%] sm:max-w-[70%]">
-                          <div className={`relative group rounded-2xl px-4 py-3 shadow-sm ${isMine ? "bg-blue-600 text-white rounded-tr-none" : "bg-white border border-gray-200 rounded-tl-none text-gray-800"}`}>
-                            {!isMine && (
-                              <div className="text-[10px] font-black flex items-center gap-1 mb-1 text-blue-600 uppercase tracking-tighter">
-                                <FiUser size={10} /> {msg.senderId.username}
-                              </div>
-                            )}
+                       <ContextMenuTrigger className="max-w-[88%] sm:max-w-[70%] transition-all">
+  <div
+    className={`relative group rounded-2xl px-4 py-3 shadow-sm transition-all duration-200
+    ${isMine
+        ? "bg-blue-600 text-white rounded-tr-none shadow-blue-200/40 hover:shadow-md"
+        : "bg-white border border-gray-200 rounded-tl-none text-gray-800 hover:shadow-md"
+      }`}
+  >
+    {/* Sender Name */}
+    {!isMine && (
+      <div className="text-[10px] font-extrabold flex items-center gap-1 mb-1 text-blue-500 uppercase tracking-wide">
+        <FiUser size={10} />
+        {msg.senderId.username}
+      </div>
+    )}
 
-                            {msg.isDeleted ? (
-                              <p className="text-[13px] leading-relaxed italic text-gray-300">Message deleted</p>
-                            ) : (
-                              <>
-                                {msg.type === "image" && (
-                                  <div className="mb-2">
-                                    <img src={`${API_URL}${msg.fileUrl}`} alt={msg.fileName} className="max-w-full max-h-80 rounded-lg object-cover cursor-pointer" onClick={() => window.open(`${API_URL}${msg.fileUrl}`)} />
-                                  </div>
-                                )}
-                                {msg.type === "video" && (
-                                  <div className="mb-2 relative group/video">
-                                    <video src={`${API_URL}${msg.fileUrl}`} className="max-w-full max-h-80 rounded-lg shadow-inner" controls />
-                                  </div>
-                                )}
-                                {msg.type === "file" && (
-                                  <a href={`${API_URL}${msg.fileUrl}`} download className={`flex items-center gap-3 p-3 rounded-xl border mb-2 transition-all no-underline ${isMine ? "bg-blue-700/30 border-blue-400/30 text-white" : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"}`}>
-                                    <div className={`p-2 rounded-lg ${isMine ? "bg-blue-500" : "bg-gray-200 text-gray-600"}`}><FiFileText size={20} /></div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-bold truncate leading-tight">{msg.fileName}</p>
-                                      <p className="text-[10px] uppercase font-black opacity-60 tracking-tighter">Download File</p>
-                                    </div>
-                                    <FiDownload className="opacity-50" />
-                                  </a>
-                                )}
-                                {msg.text && <p className="text-[14px] leading-relaxed wrap-break-word whitespace-pre-wrap font-medium">{msg.text}</p>}
-                              </>
-                            )}
-                            <div className="text-[9px] mt-2 flex justify-end items-center gap-1.5 font-bold uppercase tracking-tighter opacity-70">
-                              <span>{formatTime(msg.createdAt)}</span>
-                              {isMine && <span>• {getReadStatus(msg)}</span>}
-                            </div>
-                          </div>
-                        </ContextMenuTrigger>
+    {/* Deleted Message */}
+    {msg.isDeleted ? (
+      <p className="text-[13px] italic text-gray-400 select-none">
+        Message deleted
+      </p>
+    ) : (
+      <>
+        {/* Forwarded Label */}
+        {msg.forwardedMessage && (
+          <span className="text-[10px] italic opacity-70 block mb-1">
+            • Forwarded
+          </span>
+        )}
+
+        {/* IMAGE */}
+        {msg.type === "image" && (
+          <div className="mb-2 overflow-hidden rounded-lg">
+            <img
+              src={`${API_URL}${msg.fileUrl}`}
+              alt={msg.fileName}
+              className="max-w-full max-h-80 object-cover cursor-pointer transition-transform duration-200 hover:scale-[1.02]"
+              onClick={() => window.open(`${API_URL}${msg.fileUrl}`)}
+            />
+          </div>
+        )}
+
+        {/* VIDEO */}
+        {msg.type === "video" && (
+          <div className="mb-2 overflow-hidden rounded-lg shadow-inner">
+            <video
+              src={`${API_URL}${msg.fileUrl}`}
+              className="max-w-full max-h-80 rounded-lg"
+              controls
+            />
+          </div>
+        )}
+
+        {/* FILE */}
+        {msg.type === "file" && (
+          <a
+            href={`${API_URL}${msg.fileUrl}`}
+            download
+            className={`flex items-center gap-3 p-3 rounded-xl border mb-2 transition-all no-underline
+            ${isMine
+                ? "bg-blue-700/30 border-blue-400/30 text-white hover:bg-blue-700/40"
+                : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"
+              }`}
+          >
+            <div
+              className={`p-2 rounded-lg shrink-0
+              ${isMine
+                  ? "bg-blue-500"
+                  : "bg-gray-200 text-gray-600"
+                }`}
+            >
+              <FiFileText size={20} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">
+                {msg.fileName}
+              </p>
+              <p className="text-[10px] uppercase font-bold opacity-60 tracking-wide">
+                Download File
+              </p>
+            </div>
+
+            <FiDownload className="opacity-50 shrink-0" />
+          </a>
+        )}
+
+        {/* TEXT MESSAGE */}
+        {msg.text && (
+          <p className="text-[14px] leading-relaxed break-words whitespace-pre-wrap font-medium">
+            {msg.text}
+          </p>
+        )}
+      </>
+    )}
+
+    {/* TIMESTAMP */}
+    <div className="text-[9px] mt-2 flex justify-end items-center gap-1.5 font-semibold uppercase tracking-wide opacity-60">
+      <span>{formatTime(msg.createdAt)}</span>
+      {isMine && <span>• {getReadStatus(msg)}</span>}
+    </div>
+  </div>
+</ContextMenuTrigger>
 
                         {!msg.isDeleted && (
                           <ContextMenuContent className="w-48 font-semibold">
-                            <ContextMenuItem onClick={() => copyToClipboard(msg.text)} className="gap-2"><FiCopy size={14} /> Copy Text</ContextMenuItem>
+                            <ContextMenuItem onClick={() => copyToClipboard(msg?.text)} className="gap-2"><FiCopy size={14} /> Copy Text</ContextMenuItem>
+                <ContextMenuItem onSelect={(e) => e.preventDefault()}> <FiPhoneForwarded size={14} /> <ForwardeMessageModal messageToForward={msg} /></ContextMenuItem>
+
                             {msg.fileUrl && <ContextMenuItem onClick={() => window.open(`${API_URL}${msg.fileUrl}`)} className="gap-2"><FiMaximize2 size={14} /> View Original</ContextMenuItem>}
                             <ContextMenuItem
                               onClick={() => {
@@ -563,24 +663,64 @@ export default function ChatPage({ params }: ChatPageProps) {
 
       {/* ---------- FOOTER ---------- */}
       <footer className="p-4 border-t bg-white z-20">
-        <div className="max-w-5xl mx-auto flex items-center gap-3">
+        <div className="max-w-5xl mx-auto flex items-end gap-3">
           <SettingDropdown />
           <div className="relative flex-1">
-            <input
+            <textarea
               value={message}
               onChange={(e) => {
                 setMessage(e.target.value);
                 handleTyping();
               }}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              className="w-full rounded-2xl px-5 py-3 bg-gray-100 border-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              rows={1}
+              className="w-full rounded-2xl px-5 py-3 bg-gray-100 border-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-gray-400 resize-none overflow-hidden min-h-[48px] max-h-[120px]"
               placeholder="Write a message..."
+              style={{
+                height: 'auto',
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+              }}
             />
+            
+            {/* Mention Dropdown */}
+            {isMentionOpen && filteredParticipants.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                <div className="p-2">
+                  <p className="text-xs font-semibold text-gray-500 px-2 py-1">Mention User</p>
+                  {filteredParticipants.map((part: any) => (
+                    <button
+                      key={part._id}
+                      onClick={() => {
+                        const lastAtIndex = message.lastIndexOf("@");
+                        const beforeAt = message.slice(0, lastAtIndex);
+                        setMessage(beforeAt + `@${part.username} `);
+                        setIsMentionOpen(false);
+                      }}
+                      className="w-full text-left p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs shrink-0">
+                        {part.username?.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-medium text-sm truncate">{part.username}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <button
             onClick={sendMessage}
             disabled={!message.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white p-3.5 rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-90"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white p-3.5 rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-90 mb-0"
           >
             <FiSend size={18} />
           </button>

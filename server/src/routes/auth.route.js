@@ -14,14 +14,12 @@ router.post("/token", express.json(), async (req, res) => {
     const response = await fetch(`${LARAVEL_BACKEND_URL}/api/user`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    console.log("Token exchange response status:", response);
 
     if (!response.ok) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
     const user = await response.json();
-    console.log("User data received from Laravel backend:", user);
 
     res.cookie("erp_token", token, {
       httpOnly: true, // Prevents XSS (JavaScript access)

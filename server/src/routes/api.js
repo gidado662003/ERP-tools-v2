@@ -5,11 +5,12 @@ const Messages = require("./messages/messages.routes")
 const Admin = require("./admin/admin.routes");
 const InternalRequests = require("./internal-requisitions/requsition/requsition.route")
 const authMiddleware = require("../middleware/authMiddleware");
+const validateSanctumToken = require("../middleware/validateSanctumToken");
 const routes = express.Router();
 
-routes.use("/user", Users);
+routes.use("/user", validateSanctumToken, Users);
 routes.use("/admin", Admin);
-routes.use("/chats", authMiddleware, Chats);
-routes.use("/messages", authMiddleware, Messages);
-routes.use("/internalrequest", authMiddleware, InternalRequests)
+routes.use("/chats", validateSanctumToken, Chats);
+routes.use("/messages", validateSanctumToken, Messages);
+routes.use("/internalrequest", validateSanctumToken, InternalRequests)
 module.exports = routes;

@@ -11,6 +11,8 @@ import { ImagePreviewModal } from "./settingModals";
 import { socket } from "@/lib/socket";
 import { useAuthStore } from "@/lib/store";
 import { useParams } from "next/navigation";
+import{FILE_ACCEPT_TYPES}from "@/helper/acceptedFiles";
+
 
 export function SettingDropdown() {
     const { user: currentUser } = useAuthStore();
@@ -62,7 +64,7 @@ export function SettingDropdown() {
                         <input
                             id="photo-video-input"
                             type="file"
-                            accept="image/*, video/*"
+                            accept={FILE_ACCEPT_TYPES.IMAGES_VIDEOS}
                             className="hidden"
                             onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                         />
@@ -81,7 +83,7 @@ export function SettingDropdown() {
                         <input
                             id="document-input"
                             type="file"
-                            accept=".pdf,.doc,.docx"
+                            accept={FILE_ACCEPT_TYPES.DOCUMENTS}
                             className="hidden"
                             onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                         />

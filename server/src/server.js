@@ -114,6 +114,11 @@ io.on("connection", async (socket) => {
         readBy: [data.senderId],
         type: data.type,
         fileUrl: data.fileUrl,
+        // Forwarded message fields
+        forwardedMessage: data.forwardedMessage || false,
+      forwardedFrom: data.forwardedFrom || null,
+      originalSender: data.originalSender || null,
+      originalChatId: data.originalChatId || null,
       };
 
       const newMessage = await Message.create(messageData);
@@ -133,7 +138,9 @@ io.on("connection", async (socket) => {
 
         const populatedMessage = await Message.findById(newMessage._id)
           .populate("senderId", "username avatar")
-          .populate("readBy", "username avatar");
+          .populate("readBy", "username avatar")
+         .populate("originalSender", "username avatar")
+        .populate("forwardedFrom");
 
         io.to(data.chatId).emit("receive_message", {
           ...populatedMessage.toObject(),
@@ -169,7 +176,7 @@ io.on("connection", async (socket) => {
         lastseen: new Date(),
       });
     } catch (error) {
-      console.error("Error updating online status:", err);
+      console.error("Error updating online status:", error);
     }
   });
 });

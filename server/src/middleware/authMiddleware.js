@@ -7,6 +7,7 @@ const LARAVEL_BACKEND_URL =
 
 async function authMiddleware(req, res, next) {
   // 1) Try JWT (legacy / same-origin cookie)
+  console.log("req.cookies", req.cookies);
   const jwtToken = req.cookies && req.cookies.token;
   if (jwtToken) {
     try {
@@ -21,12 +22,13 @@ async function authMiddleware(req, res, next) {
   // 2) Try Sanctum (erp_token cookie or Authorization header)
   const header = req.headers && req.headers.authorization;
   const cookieToken = req.cookies && req.cookies.erp_token;
+  console.log("cookieToken", cookieToken);
   const queryToken = req.query && req.query.token;
   const sanctumToken =
     header && header.startsWith("Bearer ")
       ? header.split(" ")[1]
       : cookieToken || queryToken;
-
+  console.log("sanctumToken", sanctumToken);
   if (!sanctumToken) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -35,6 +37,7 @@ async function authMiddleware(req, res, next) {
     const response = await fetch(`${LARAVEL_BACKEND_URL}/api/user`, {
       headers: { Authorization: `Bearer ${sanctumToken}` },
     });
+    console.log("response", response);
     if (!response.ok) {
       return res.status(401).json({ message: "Invalid or expired token" });
     }

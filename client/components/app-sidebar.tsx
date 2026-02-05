@@ -14,17 +14,18 @@ import { CreateGroupChatModal } from "@/components/settingModals";
 import { Button } from "@/components/ui/button";
 import { createOrGetPrivateChat, getAllusers, getUserChats } from "@/app/api";
 import { useAuthStore } from "@/lib/store";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { socket } from "@/lib/socket";
 import { useModuleStore } from "../lib/moduleStore"
+
 interface Chat {
   _id: string;
   type: "private" | "group";
   participants: any[];
   groupName?: string;
-  privateLastChat?: { text: string; senderId: string; readBy: string[]; timestamp: string };
-  groupLastMessage?: { text: string; senderId: string; timestamp: string; readBy?: string[] };
+  privateLastChat?: { text: string; senderId: string; readBy: string[]; timestamp: string;isDeleted:Boolean };
+  groupLastMessage?: { text: string; senderId: string; timestamp: string; readBy?: string[];isDeleted:Boolean };
   groupMembers?: any[];
   updatedAt: string;
 }
@@ -37,11 +38,16 @@ export function AppSidebar() {
 
   const [usersData, setUsersData] = useState<any>();
   const [chats, setChats] = useState<Chat[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [chatsLoading, setChatsLoading] = useState(true);
   const [showUsers, setShowUsers] = useState(false);
   const [Search, setSearch] = useState<string>("");
-  const setModule = useModuleStore((set) => set.setModule)
+  const setModule = useModuleStore((set) => set.setModule);
+
+  // Use refs to persist across renders
+  const originalTitleRef = useRef<string>("Chat App");
+  const blinkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- API Calls ---
   const fetchUserChats = useCallback(async () => {
@@ -66,25 +72,100 @@ export function AppSidebar() {
     }
   };
 
+  // --- Title Blink Functions ---
+  const startTitleBlink = useCallback(() => {
+    // Don't start if already blinking
+    if (blinkIntervalRef.current) return;
+
+    let isOriginal = true;
+    blinkIntervalRef.current = setInterval(() => {
+      document.title = isOriginal ? "🔔 New Message!" : originalTitleRef.current;
+      isOriginal = !isOriginal;
+    }, 1000);
+  }, []);
+
+  const stopTitleBlink = useCallback(() => {
+    if (blinkIntervalRef.current) {
+      clearInterval(blinkIntervalRef.current);
+      blinkIntervalRef.current = null;
+      document.title = originalTitleRef.current;
+    }
+  }, []);
+
   // --- Real-time Updates ---
   useEffect(() => {
     fetchUserChats();
     fetchUsers();
   }, [fetchUserChats]);
 
+  // Store original title on mount
   useEffect(() => {
-    const handleRefresh = () => fetchUserChats();
+    originalTitleRef.current = document.title;
+    
+    // Cleanup on unmount
+    return () => {
+      stopTitleBlink();
+    };
+  }, [stopTitleBlink]);
 
-    socket.on("chat_list_update", handleRefresh);
-    socket.on("messages_read", handleRefresh);
-    socket.on("receive_message", handleRefresh);
+  // Stop blinking when user focuses the window
+  useEffect(() => {
+    const handleFocus = () => stopTitleBlink();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        stopTitleBlink();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      socket.off("chat_list_update", handleRefresh);
-      socket.off("messages_read", handleRefresh);
-      socket.off("receive_message", handleRefresh);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [fetchUserChats]);
+  }, [stopTitleBlink]);
+
+ // Create sound ref once
+const soundRef = useRef<HTMLAudioElement | null>(null);
+
+useEffect(() => {
+  // Initialize sound once
+  if (!soundRef.current) {
+    soundRef.current = new Audio("/sounds/message.wav");
+  }
+
+  const handleChatUpdate = (data: any) => {
+    fetchUserChats();
+
+    if (data?.senderId && data.senderId !== user?._id) {
+      // Play sound
+      if (soundRef.current) {
+        soundRef.current.currentTime = 0;
+        soundRef.current.play().catch(() => {});
+      }
+
+      // Start title blink if window is not focused
+      if (document.hidden || !document.hasFocus()) {
+        startTitleBlink();
+      }
+    }
+  };
+
+  const handleMessagesRead = () => fetchUserChats();
+
+  socket.on("chat_list_update", handleChatUpdate);
+  socket.on("messages_read", handleMessagesRead);
+  socket.on("receive_message", handleChatUpdate);
+  socket.on("message_was_deleted", handleChatUpdate);
+
+  return () => {
+    socket.off("chat_list_update", handleChatUpdate);
+    socket.off("messages_read", handleMessagesRead);
+    socket.off("receive_message", handleChatUpdate);
+    socket.off("message_delete", handleChatUpdate); // ✅ Don't forget this!
+  };
+}, [fetchUserChats, user, startTitleBlink]);
 
   // --- Unread Logic ---
   function hasUnreadMessages(chat: Chat) {
@@ -177,6 +258,7 @@ export function AppSidebar() {
               const unread = hasUnreadMessages(chat);
               const isActive = activeChatId === chat._id;
               const lastMsg = chat.type === "private" ? chat.privateLastChat : chat.groupLastMessage;
+              const isDeleted = lastMsg?.isDeleted
 
               return (
                 <Link
@@ -200,8 +282,8 @@ export function AppSidebar() {
                     <p className={`truncate uppercase ${isActive ? "text-white" : "text-gray-900"}`}>
                       {chat.type === "group" ? chat.groupName : chat.participants.find(p => p._id !== user?._id)?.username}
                     </p>
-                    <p className={`text-xs truncate ${isActive ? "text-blue-100" : unread ? "text-blue-600" : "text-gray-500"}`}>
-                      {lastMsg?.text || "No messages"}
+                    <p className={`text-xs truncate ${isActive ? "text-blue-100" : unread ? "text-blue-600" : "text-gray-500"}`}>{isDeleted?"message deleted": lastMsg?.text || "No messages"}
+                      
                     </p>
                   </div>
                 </Link>

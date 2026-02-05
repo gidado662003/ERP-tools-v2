@@ -30,7 +30,7 @@ requestApi.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export const internlRequestAPI = {
@@ -73,7 +73,7 @@ export const internlRequestAPI = {
             startDate,
             endDate,
           },
-        }
+        },
       );
       return res.data;
     } catch (error) {
@@ -90,7 +90,24 @@ export const internlRequestAPI = {
   },
   createRequest: async (request: any) => {
     try {
-      const res = await requestApi.post("/internalrequest/create", request);
+      const formData = new FormData();
+
+      formData.append("title", request.title);
+      formData.append("location", request.location);
+      formData.append("category", request.category);
+      formData.append("requestedOn", request.requestedOn);
+
+      formData.append("accountToPay", JSON.stringify(request.accountToPay));
+      formData.append("items", JSON.stringify(request.items));
+
+      request.attachement.forEach((file: any) => {
+        formData.append("attachement", file);
+      });
+      const res = await requestApi.post("/internalrequest/create", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       return res.data;
     } catch (error) {
       console.error("Create request failed", error);
@@ -100,7 +117,7 @@ export const internlRequestAPI = {
     try {
       const res = await requestApi.put(
         `/internalrequest/update/${id}`,
-        request
+        request,
       );
       return res.data;
     } catch (error) {

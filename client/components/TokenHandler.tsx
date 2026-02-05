@@ -5,7 +5,7 @@ import { useAuthStore } from "../lib/store";
 
 export default function TokenHandler() {
   const { user, setUser, } = useAuthStore();
-  console.log("user", user);
+  
 
   useEffect(() => {
     try {
@@ -18,7 +18,7 @@ export default function TokenHandler() {
           const serverOrigin = `${window.location.protocol}//${window.location.hostname}:5001`;
 
           // Step 1: Exchange token for cookie
-          console.log("[TokenHandler] Exchanging token for cookie...");
+   
           const response = await fetch(`${serverOrigin}/auth/token`, {
             method: "POST",
             credentials: "include",
@@ -29,14 +29,17 @@ export default function TokenHandler() {
             sessionStorage.setItem("erp_token", token);
           }
           const data = await response.json();
-          console.log("data", data);
-          if (data.ok) {
-            setUser(data.user);
+       
+
+          // Step 2: Sync user profile in our MongoDB (authoritative user record)
+          
+          const syncResponse = await authAPI.syncUserProfile();
+
+
+          // Step 3: Store user in auth store
+          if (syncResponse.user) {
+            setUser(syncResponse.user);
           }
-
-          // Step 2: Sync user profile
-          console.log("[TokenHandler] Syncing user profile...");
-
 
           // Step 4: Remove token from URL
           const newUrl = window.location.pathname + window.location.hash;

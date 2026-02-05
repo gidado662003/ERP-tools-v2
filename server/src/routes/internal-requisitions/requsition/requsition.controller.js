@@ -1,6 +1,5 @@
 const internalRequsitionsSchema = require("../../../models/internal-requsitions-schema");
-const InternalRequisition = require("../../../models/internal-requsitions-schema")
-
+const InternalRequisition = require("../../../models/internal-requsitions-schema");
 
 async function getAllDataFigures(req, res) {
   try {
@@ -15,9 +14,9 @@ async function getAllDataFigures(req, res) {
       {
         $group: {
           _id: "$status",
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const figures = {
@@ -28,7 +27,7 @@ async function getAllDataFigures(req, res) {
       outstandingTotal: 0,
     };
 
-    result.forEach(item => {
+    result.forEach((item) => {
       figures.countTotal += item.count;
 
       if (item._id === "approved") figures.approvedTotal = item.count;
@@ -38,7 +37,6 @@ async function getAllDataFigures(req, res) {
     });
 
     res.status(200).json(figures);
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch requisition figures" });
@@ -47,13 +45,23 @@ async function getAllDataFigures(req, res) {
 
 async function getAllData(req, res) {
   try {
-    const { search, status, bank, cursorTimestamp, cursorId, startDate, endDate } = req.query;
+    const {
+      search,
+      status,
+      bank,
+      cursorTimestamp,
+      cursorId,
+      startDate,
+      endDate,
+    } = req.query;
     const limit = 10;
 
-
     const filters = [];
-
-    if (req.user.department.name !== "Finance") {
+    // Only filter by department if user is NOT Finance AND NOT Admin Manager
+    if (
+      req.user.role !== "Admin Manager" &&
+      req.user.department?.name !== "Finance"
+    ) {
       filters.push({ department: req.user.department.name });
     }
 
@@ -64,9 +72,9 @@ async function getAllData(req, res) {
           { createdAt: { $lt: new Date(cursorTimestamp) } },
           {
             createdAt: new Date(cursorTimestamp),
-            _id: { $lt: cursorId }
-          }
-        ]
+            _id: { $lt: cursorId },
+          },
+        ],
       });
     }
 
@@ -78,11 +86,10 @@ async function getAllData(req, res) {
           { location: { $regex: search, $options: "i" } },
           { "paymentHistory.bank": { $regex: search, $options: "i" } },
           { requisitionNumber: { $regex: search, $options: "i" } },
-          { "user.name": { $regex: search, $options: "i" } }
-        ]
+          { "user.name": { $regex: search, $options: "i" } },
+        ],
       });
     }
-
 
     if (status) filters.push({ status });
     if (bank) filters.push({ bank });
@@ -95,8 +102,7 @@ async function getAllData(req, res) {
 
     const query = filters.length ? { $and: filters } : {};
     // Fetch limit + 1 to detect hasMore
-    const results = await InternalRequisition
-      .find(query)
+    const results = await InternalRequisition.find(query)
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1);
 
@@ -108,7 +114,7 @@ async function getAllData(req, res) {
       const lastItem = data[data.length - 1];
       nextCursor = {
         timestamp: lastItem.createdAt,
-        id: lastItem._id
+        id: lastItem._id,
       };
     }
     const counts = await InternalRequisition.aggregate([
@@ -116,9 +122,9 @@ async function getAllData(req, res) {
       {
         $group: {
           _id: "$status",
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
     const figures = {
       countTotal: 0,
@@ -127,7 +133,7 @@ async function getAllData(req, res) {
       rejectedTotal: 0,
       outstandingTotal: 0,
     };
-    counts.forEach(item => {
+    counts.forEach((item) => {
       figures.countTotal += item.count;
       if (item._id === "approved") figures.approvedTotal = item.count;
       if (item._id === "pending") figures.pendingTotal = item.count;
@@ -135,15 +141,17 @@ async function getAllData(req, res) {
       if (item._id === "outstanding") figures.outstandingTotal = item.count;
     });
 
-
     res.status(200).json({
-      data, nextCursor, hasMore, counts: {
+      data,
+      nextCursor,
+      hasMore,
+      counts: {
         countTotal: figures.countTotal,
         approvedTotal: figures.approvedTotal,
         pendingTotal: figures.pendingTotal,
         rejectedTotal: figures.rejectedTotal,
         outstandingTotal: figures.outstandingTotal,
-      }
+      },
     });
   } catch (error) {
     console.error(error);
@@ -151,15 +159,14 @@ async function getAllData(req, res) {
   }
 }
 
-
 async function getDataById(req, res) {
   try {
-    const { id } = req.params
-    const request = await InternalRequisition.findById(id)
+    const { id } = req.params;
+    const request = await InternalRequisition.findById(id);
     if (!request) {
       return res.status(404).json({ message: "Request not found" });
     }
-    res.status(200).json(request)
+    res.status(200).json(request);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error getting data" });
@@ -168,8 +175,8 @@ async function getDataById(req, res) {
 
 async function createRequest(req, res) {
   try {
-    // req.user from authMiddleware (Laravel user); schema expects user: { name, email, department, role }
     const laravelUser = req.user;
+
     const user = {
       name: laravelUser.name || "",
       email: laravelUser.email || "",
@@ -177,29 +184,31 @@ async function createRequest(req, res) {
       role: laravelUser.role || "user",
     };
 
+    const items = JSON.parse(req.body.items);
+    const accountToPay = JSON.parse(req.body.accountToPay);
+
+    const attachments =
+      req.files?.map((file) => `/uploads/${file.filename}`) || [];
+
+    const totalAmount = items.reduce((acc, item) => acc + item.total, 0);
 
     const date = new Date();
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    const requisitionNumber = `IR-${y}${m}${d}-${Date.now()
-      .toString()
-      .slice(-6)}`;
-    const totalAmount = req.body.items.reduce((acc, item) => acc + item.total, 0);
+    const requisitionNumber = `IR-${date.getFullYear()}${date.getMonth() + 1}${date.getDate()}-${Date.now().toString().slice(-6)}`;
 
     const request = await InternalRequisition.create({
       title: req.body.title,
-      department: req.user.department.name,
+      department: laravelUser.department.name,
       requestedOn: req.body.requestedOn,
-      accountToPay: req.body.accountToPay,
-      requisitionNumber: requisitionNumber,
-      totalAmount: totalAmount,
+      accountToPay,
+      requisitionNumber,
+      totalAmount,
       location: req.body.location,
       category: req.body.category,
-      items: req.body.items,
-      attachments: req.body.attachments,
-      user: user,
+      items,
+      attachments,
+      user,
     });
+
     res.status(201).json(request);
   } catch (error) {
     console.error(error);
@@ -213,11 +222,17 @@ async function updateRequest(req, res) {
     const data = req.body;
     const request = await InternalRequisition.findById(id);
 
+    if (req.user.department.name !== "Finance") {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to update this request" });
+    }
+
     if (!request) return res.status(404).json({ message: "Not found" });
 
     request.status = data.status;
 
-    if (data.status === 'rejected') {
+    if (data.status === "rejected") {
       request.rejectedOn = new Date();
       request.comment = data.financeComment;
     } else {
@@ -247,4 +262,10 @@ async function updateRequest(req, res) {
   }
 }
 
-module.exports = { getAllDataFigures, getAllData, getDataById, createRequest, updateRequest }
+module.exports = {
+  getAllDataFigures,
+  getAllData,
+  getDataById,
+  createRequest,
+  updateRequest,
+};
