@@ -116,9 +116,9 @@ io.on("connection", async (socket) => {
         fileUrl: data.fileUrl,
         // Forwarded message fields
         forwardedMessage: data.forwardedMessage || false,
-      forwardedFrom: data.forwardedFrom || null,
-      originalSender: data.originalSender || null,
-      originalChatId: data.originalChatId || null,
+        forwardedFrom: data.forwardedFrom || null,
+        originalSender: data.originalSender || null,
+        originalChatId: data.originalChatId || null,
       };
 
       const newMessage = await Message.create(messageData);
@@ -139,8 +139,8 @@ io.on("connection", async (socket) => {
         const populatedMessage = await Message.findById(newMessage._id)
           .populate("senderId", "username avatar")
           .populate("readBy", "username avatar")
-         .populate("originalSender", "username avatar")
-        .populate("forwardedFrom");
+          .populate("originalSender", "username avatar")
+          .populate("forwardedFrom");
 
         io.to(data.chatId).emit("receive_message", {
           ...populatedMessage.toObject(),

@@ -12,19 +12,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/store";
-import { createGroupChat, getAllusers, addUserToGroup, createOrGetPrivateChat, getGroupInfo,getUserChats } from "@/app/api";
+import {
+  createGroupChat,
+  getAllusers,
+  addUserToGroup,
+  createOrGetPrivateChat,
+  getGroupInfo,
+  getUserChats,
+} from "@/app/api";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/app/api";
 import { socket } from "@/lib/socket";
-
-interface User {
-  _id: string;
-  username: string;
-  email: string;
-  avatar?: string;
-  isOnline?: boolean;
-  joinedRooms: string[];
-}
+import type { User, Chat, Message } from "@/lib/chatTypes";
 
 export function CreateGroupChatModal() {
   const { user } = useAuthStore();
@@ -56,11 +55,9 @@ export function CreateGroupChatModal() {
 
   const fetchUsers = async () => {
     try {
-
       const response = await getAllusers();
 
       setGetAllUsers(response.data?.users || []);
-
     } catch (error) {
       console.error("Fetch users error:", error);
     }
@@ -129,13 +126,11 @@ export function CreateGroupChatModal() {
   );
 }
 
-
 export function AddToGroup({ chatId }: { chatId: string }) {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingUser, setAddingUser] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-
 
   useEffect(() => {
     fetchUsersForGroup();
@@ -144,7 +139,6 @@ export function AddToGroup({ chatId }: { chatId: string }) {
   const fetchUsersForGroup = async () => {
     setLoading(true);
     try {
-
       const response = await getAllusers();
       setAllUsers(response.data?.users || []);
     } catch (error) {
@@ -164,7 +158,7 @@ export function AddToGroup({ chatId }: { chatId: string }) {
     try {
       await addUserToGroup({ userId, chatId });
       // Remove the user from the list since they're now added
-      setAllUsers(prev => prev.filter(user => user._id !== userId));
+      setAllUsers((prev) => prev.filter((user) => user._id !== userId));
     } catch (error) {
       console.error("Failed to add user:", error);
     } finally {
@@ -172,16 +166,10 @@ export function AddToGroup({ chatId }: { chatId: string }) {
     }
   };
 
-
-
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <div>
-
-          Add members
-        </div>
-
+        <div>Add members</div>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-md">
@@ -193,33 +181,44 @@ export function AddToGroup({ chatId }: { chatId: string }) {
         </DialogHeader>
 
         <div className="space-y-3">
-          <Input placeholder="Search users..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
 
           <div className="max-h-48 overflow-y-auto space-y-2">
             {loading ? (
               <p className="text-gray-500 text-center py-4">Loading users...</p>
             ) : allUsers.length > 0 ? (
-              allUsers.filter((user) => user.username.toLowerCase().includes(search.toLowerCase())).map((user) => (
-                <div
-                  key={user._id}
-                  className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded"
-                >
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
-                    {user.username?.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-medium">{user.username}</p>
-                    <p className="text-sm text-gray-500">{user.email}</p>
-                  </div>
-                  <button
-                    onClick={() => handleAddUser(user._id)}
-                    disabled={addingUser === user._id || user.joinedRooms.includes(chatId)}
-                    className="ml-auto px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              allUsers
+                .filter((user) =>
+                  user.username.toLowerCase().includes(search.toLowerCase()),
+                )
+                .map((user) => (
+                  <div
+                    key={user._id}
+                    className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded"
                   >
-                    {addingUser === user._id ? "Adding..." : "Add"}
-                  </button>
-                </div>
-              ))
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                      {user.username?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium">{user.username}</p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddUser(user._id)}
+                      disabled={
+                        addingUser === user._id ||
+                        user?.joinedRooms?.includes(chatId)
+                      }
+                      className="ml-auto px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {addingUser === user._id ? "Adding..." : "Add"}
+                    </button>
+                  </div>
+                ))
             ) : (
               <p className="text-gray-500 text-center py-4">No users found</p>
             )}
@@ -230,14 +229,19 @@ export function AddToGroup({ chatId }: { chatId: string }) {
   );
 }
 
-export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New callback prop
-  selectedFile }: {
-    imageUrl: string | null;
-    isOpen: boolean;
-    onClose: () => void;
-    onSend: (uploadedUrl: string, type: string) => void;
-    selectedFile: File | null;
-  }) {
+export function ImagePreviewModal({
+  imageUrl,
+  isOpen,
+  onClose,
+  onSend, // New callback prop
+  selectedFile,
+}: {
+  imageUrl: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSend: (uploadedUrl: string, type: string) => void;
+  selectedFile: File | null;
+}) {
   const handleSend = async () => {
     try {
       const response = await uploadFile(selectedFile);
@@ -253,11 +257,10 @@ export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New c
         }
       }
       onSend(uploadedUrl, type);
-
     } catch (error) {
       console.error("Failed to upload file:", error);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -289,15 +292,15 @@ export function ImagePreviewModal({ imageUrl, isOpen, onClose, onSend,  // New c
               handleSend();
               onClose();
             }}
-            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded">
+            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded"
+          >
             Send
           </button>
         </div>
-      </DialogContent >
-    </Dialog >
+      </DialogContent>
+    </Dialog>
   );
 }
-
 
 export function GroupInfoModal({ chatId }: { chatId: string }) {
   const router = useRouter();
@@ -313,7 +316,7 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
     } catch (error) {
       console.error("Failed to fetch group info:", error);
     }
-  }
+  };
   const goToChat = async (userId: string) => {
     try {
       const response = await createOrGetPrivateChat(userId);
@@ -323,15 +326,13 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
     } catch (error) {
       console.error("Failed to create/get private chat:", error);
     }
-  }
+  };
 
   return (
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <button>
-            Group Info
-          </button>
+          <button>Group Info</button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           {groupInfo ? (
@@ -342,14 +343,14 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
                 <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
                   {groupInfo.name?.charAt(0).toUpperCase()}
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-1">{groupInfo.name}</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  {groupInfo.name}
+                </h3>
               </center>
 
               {/* Bottom Section */}
               <div className="flex items-center gap-4 p-4 rounded-xl border">
-
                 <div className="flex-1">
-
                   <p className="text-sm text-gray-600 mb-2">
                     Created {new Date(groupInfo.createdAt).toLocaleDateString()}
                   </p>
@@ -369,8 +370,12 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
               {/* Description */}
               {groupInfo.description && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Description</h4>
-                  <p className="text-gray-800 leading-relaxed">{groupInfo.description}</p>
+                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                    Description
+                  </h4>
+                  <p className="text-gray-800 leading-relaxed">
+                    {groupInfo.description}
+                  </p>
                 </div>
               )}
 
@@ -383,15 +388,24 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
                   </h4>
                   <div className="space-y-2">
                     {groupInfo.admins.map((admin: User) => (
-                      <div key={admin._id} className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div
+                        key={admin._id}
+                        className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                      >
                         <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold">
                           {admin.username?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-gray-800">{admin.username}</p>
-                          <p className="text-xs text-green-600 font-medium">Administrator</p>
+                          <p className="font-medium text-gray-800">
+                            {admin.username}
+                          </p>
+                          <p className="text-xs text-green-600 font-medium">
+                            Administrator
+                          </p>
                         </div>
-                        <div className={`w-3 h-3 rounded-full ${admin.isOnline ? 'bg-green-400' : 'bg-gray-300'}`}></div>
+                        <div
+                          className={`w-3 h-3 rounded-full ${admin.isOnline ? "bg-green-400" : "bg-gray-300"}`}
+                        ></div>
                       </div>
                     ))}
                   </div>
@@ -407,15 +421,25 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
                   </h4>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {groupInfo.members.map((member: User) => (
-                      <div onClick={() => goToChat(member._id)} key={member._id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                      <div
+                        onClick={() => goToChat(member._id)}
+                        key={member._id}
+                        className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
                         <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                           {member.username?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-gray-800">{member.username}</p>
-                          <p className="text-xs text-gray-500">{member.email}</p>
+                          <p className="font-medium text-gray-800">
+                            {member.username}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {member.email}
+                          </p>
                         </div>
-                        <div className={`w-3 h-3 rounded-full ${member.isOnline ? 'bg-green-400' : 'bg-gray-300'}`}></div>
+                        <div
+                          className={`w-3 h-3 rounded-full ${member.isOnline ? "bg-green-400" : "bg-gray-300"}`}
+                        ></div>
                       </div>
                     ))}
                   </div>
@@ -436,36 +460,11 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
   );
 }
 
-
-interface Chat {
-  _id: string;
-  name?: string;
-  type: "private" | "group";
-  members?: User[];
-}
-
-interface Chat {
-  _id: string;
-  groupName?: string;
-  type: "private" | "group";
-  participants?: User[];
-  groupMembers?: User[];
-}
-
-interface Message {
-  _id: string;
-  text: string;
-  senderId: User;
-  chatId: string;
-  createdAt: string;
-  type: string;
-  fileUrl: string;
-  fileName: string;
-  readBy: User[];
-  isDeleted?: boolean;
-  forwardedMessage?: boolean;
-}
-export function ForwardeMessageModal({ messageToForward }: { messageToForward: Message }) {
+export function ForwardeMessageModal({
+  messageToForward,
+}: {
+  messageToForward: Message;
+}) {
   const [chatList, setChatList] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
   const [forwarding, setForwarding] = useState(false);
@@ -473,7 +472,7 @@ export function ForwardeMessageModal({ messageToForward }: { messageToForward: M
   const { user: currentUser } = useAuthStore();
   const router = useRouter();
   console.log("Message to forward:", messageToForward);
-console.log("Current user:", currentUser);
+  console.log("Current user:", currentUser);
   useEffect(() => {
     fetchChats();
   }, []);
@@ -485,7 +484,7 @@ console.log("Current user:", currentUser);
     } catch (error) {
       console.error("Fetch chats error:", error);
     }
-  }
+  };
 
   const handleForwardMessage = async (chatId: string) => {
     setForwarding(true);
@@ -494,14 +493,14 @@ console.log("Current user:", currentUser);
         chatId: chatId,
         text: messageToForward.text,
         type: messageToForward.type,
-        fileUrl: messageToForward.fileUrl ||"",
+        fileUrl: messageToForward.fileUrl || "",
         fileName: messageToForward.fileName || "",
         senderId: currentUser?._id,
         timestamp: new Date().toISOString(),
-         forwardedFrom: messageToForward._id,
-      originalSender: messageToForward.senderId,
-      originalChatId: messageToForward.chatId,
-      forwardedMessage:true
+        forwardedFrom: messageToForward._id,
+        originalSender: messageToForward.senderId,
+        originalChatId: messageToForward.chatId,
+        forwardedMessage: true,
       });
 
       router.push(`/chat/chats/${chatId}`);
@@ -510,17 +509,19 @@ console.log("Current user:", currentUser);
     } finally {
       setForwarding(false);
     }
-  }
+  };
 
   const getChatDisplayName = (chat: Chat): string => {
     if (chat.type === "group") {
       return chat.groupName || "Group Chat";
     } else {
       // For private chat, find the other participant's name
-      const otherParticipant = chat.participants?.find(p => p._id !== currentUser?._id);
+      const otherParticipant = chat.participants?.find(
+        (p) => p._id !== currentUser?._id,
+      );
       return otherParticipant?.username || "Private Chat";
     }
-  }
+  };
 
   const getMemberCount = (chat: Chat): number => {
     if (chat.type === "group") {
@@ -528,10 +529,10 @@ console.log("Current user:", currentUser);
     } else {
       return chat.participants?.length || 2;
     }
-  }
+  };
 
   const filteredChats = chatList.filter((chat) =>
-    getChatDisplayName(chat).toLowerCase().includes(search.toLowerCase())
+    getChatDisplayName(chat).toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -547,8 +548,8 @@ console.log("Current user:", currentUser);
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <Input 
-            placeholder="Search chats..." 
+          <Input
+            placeholder="Search chats..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -568,7 +569,9 @@ console.log("Current user:", currentUser);
                         {getChatDisplayName(chat)}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {chat.type === "group" ? `${getMemberCount(chat)} members` : "Private chat"}
+                        {chat.type === "group"
+                          ? `${getMemberCount(chat)} members`
+                          : "Private chat"}
                       </p>
                     </div>
                   </div>
