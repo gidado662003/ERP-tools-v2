@@ -182,11 +182,12 @@ async function createRequest(req, res) {
     const laravelUser = req.user;
 
     const user = {
-      name: laravelUser.name || "",
+      name: laravelUser.name || laravelUser.username,
       email: laravelUser.email || "",
-      department: laravelUser.department.name || "",
+      department: laravelUser.department.name || laravelUser.department,
       role: laravelUser.role || "user",
     };
+    console.log(user);
 
     const items = JSON.parse(req.body.items);
     const accountToPay = JSON.parse(req.body.accountToPay);
@@ -245,12 +246,14 @@ async function createRequest(req, res) {
 }
 
 async function updateRequest(req, res) {
+  const isDev = process.env.NODE_ENV === "development";
+
   try {
     const { id } = req.params;
     const data = req.body;
     const request = await InternalRequisition.findById(id);
 
-    if (req.user.department.name !== "Finance") {
+    if (!isDev && req.user.department.name !== "Finance") {
       return res
         .status(403)
         .json({ message: "You are not authorized to update this request" });

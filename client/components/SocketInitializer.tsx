@@ -8,6 +8,7 @@ export default function SocketInitializer() {
   const setIsConnected = useSocketStore((state) => state.setIsConnected);
   const { user, isAuthenticated } = useAuthStore();
   const userId = user?._id ?? user?.id ?? null;
+  console.log("id",userId)
 
   useEffect(() => {
     if (isAuthenticated && userId) {

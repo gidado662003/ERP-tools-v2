@@ -60,6 +60,7 @@ export default function RequestDetailsPage() {
   const [manualAmount, setManualAmount] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"bank" | "cheque">("bank");
   const user = useAuthStore((state) => state.user);
+  const isDev = process.env.NODE_ENV === "development";
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -118,7 +119,7 @@ export default function RequestDetailsPage() {
   );
   const canProcess =
     ["pending", "outstanding"].includes(request.status) &&
-    (user?.department === "Finance" || user?.role === "admin");
+    (isDev||user?.department === "Finance" || user?.role === "admin");
   const isFullyPaid = amountRemaining === 0;
 
   // Handle approve / reject
@@ -127,9 +128,9 @@ export default function RequestDetailsPage() {
   ) => {
     if (!id) return;
     if (!request) return;
-    if (user?.department !== "Finance")
-      return toast.error("You are not authorized to update this request");
-
+   if (!isDev && user?.department !== "Finance" ) {
+  return toast.error("You are not authorized to update this request");
+}
     if (status !== "rejected") {
       if (!selectedBank) return toast.error("Please select a bank account.");
       if (!amountToPay || amountToPay <= 0)

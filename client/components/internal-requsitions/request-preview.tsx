@@ -26,9 +26,10 @@ type RequisitionViewProps = {
     handleCreateRequest: () => void;
     onBack: () => void;
     onNext: () => void;
+    loading:boolen
 };
 
-function RequestPreview({ formData, setFormData, onBack, onNext, handleCreateRequest }: RequisitionViewProps) {
+function RequestPreview({ formData, setFormData, onBack, onNext, handleCreateRequest,loading }: RequisitionViewProps) {
     const { title, location, category, requestedOn, accountToPay, items, attachement } =
         formData;
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
@@ -146,10 +147,10 @@ function RequestPreview({ formData, setFormData, onBack, onNext, handleCreateReq
 
                 {/* Actions */}
                 <div className="flex justify-between pt-4">
-                    <Button variant="outline" onClick={onBack}>
+                    <Button disabled={loading} variant="outline" onClick={onBack}>
                         Back
                     </Button>
-                    <Button onClick={handleCreateRequest}>Submit Requisition</Button>
+                    <Button disabled={loading} onClick={handleCreateRequest}>{loading ? "Submitting..." : "Submit Requisition"}</Button>
                 </div>
             </CardContent>
         </Card>

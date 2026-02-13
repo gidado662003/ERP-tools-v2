@@ -9,6 +9,7 @@ import { internlRequestAPI } from '@/lib/internalRequestApi'
 import { toast } from 'sonner'
 function page() {
     const [currentStep, setCurrentStep] = useState(1)
+    const [loading,setLoading] = useState<boolen>()
     const [formData, setFormData] = useState<CreateRequisitionPayload>({
         title: '',
         location: '',
@@ -22,36 +23,43 @@ function page() {
         items: [],
         attachement: []
     })
-    console.log('formData', formData)
+    console.log('loading', loading)
     const handleNextStep = () => {
         setCurrentStep(currentStep + 1)
     }
     const handlePreviousStep = () => {
         setCurrentStep(currentStep - 1)
     }
-    const handleCreateRequest = async () => {
-        const res = await internlRequestAPI.createRequest(formData)
-        if (res.status === 201) {
-            toast.success('Request created successfully')
-            setCurrentStep(1)
-        } else {
-            toast.error('Failed to create request')
-        }
-        setFormData({
-            title: '',
-            location: '',
-            category: '',
-            requestedOn: new Date().toISOString().split('T')[0],
-            accountToPay: {
-                accountName: '',
-                accountNumber: '',
-                bankName: '',
-            },
-            items: [],
-            attachement: []
-        })
-        toast.success('Request created successfully')
-    }
+    
+ const handleCreateRequest = async () => {
+  setLoading(true);
+
+  try {
+    await internlRequestAPI.createRequest(formData);
+
+    toast.success("Request created successfully");
+    setCurrentStep(1);
+
+    setFormData({
+      title: "",
+      location: "",
+      category: "",
+      requestedOn: new Date().toISOString().split("T")[0],
+      accountToPay: {
+        accountName: "",
+        accountNumber: "",
+        bankName: "",
+      },
+      items: [],
+      attachement: [],
+    });
+  } catch (error) {
+    console.error("Error creating request:", error);
+    toast.error("Failed to create request");
+  } finally {
+    setLoading(false);
+  }
+};
     return (
         <div>
             {/* <header className='flex flex-col gap-2'>
@@ -70,7 +78,7 @@ function page() {
                     <div className='p-4'>
                         {currentStep === 1 && <RequestForm handleNextStep={handleNextStep} formData={formData} handleFormData={setFormData} />}
                         {currentStep === 2 && <RequisitionItems formData={formData} setFormData={setFormData} onBack={handlePreviousStep} onNext={handleNextStep} />}
-                        {currentStep === 3 && <RequestPreview formData={formData} setFormData={setFormData} onBack={handlePreviousStep} onNext={handleCreateRequest} handleCreateRequest={handleCreateRequest} />}
+                        {currentStep === 3 && <RequestPreview formData={formData} setFormData={setFormData} onBack={handlePreviousStep} onNext={handleCreateRequest} handleCreateRequest={handleCreateRequest} loading={loading}/>}
                     </div>
                 </div>
             </main>
