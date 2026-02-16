@@ -61,7 +61,6 @@ async function getAllData(req, res) {
     const limit = 10;
 
     const filters = [];
-    console.log(req.user.department.name, req.user.role);
     if (
       req.user.role !== "Admin Manager" &&
       req.user.department.name !== "Finance"
@@ -108,7 +107,8 @@ async function getAllData(req, res) {
     // Fetch limit + 1 to detect hasMore
     const results = await InternalRequisition.find(query)
       .sort({ createdAt: -1, _id: -1 })
-      .limit(limit + 1);
+      .limit(limit + 1)
+      .lean();
 
     const hasMore = results.length > limit;
     const data = hasMore ? results.slice(0, limit) : results;

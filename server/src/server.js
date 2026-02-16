@@ -23,7 +23,6 @@ const io = new Server(server, {
 });
 
 io.on("connection", async (socket) => {
-
   const userId = socket.handshake.auth.userId;
   try {
     const res = await User.findByIdAndUpdate(userId, { isOnline: true });

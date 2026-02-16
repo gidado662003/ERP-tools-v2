@@ -1,11 +1,14 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import TokenHandler from "../components/TokenHandler";
-import DevAuthInitializer from "../components/DevAuthInitializer";
 import { Toaster } from "@/components/ui/sonner";
+import LayoutClient from "./LayoutClient";
+import { useDisplayMode } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "syscodes Tools",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -18,10 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {authMode === "laravel" && <TokenHandler />}
-        {authMode === "mock" && <DevAuthInitializer />}
-
-        {children}
+        <LayoutClient authMode={authMode}>{children}</LayoutClient>
         <Toaster />
       </body>
     </html>

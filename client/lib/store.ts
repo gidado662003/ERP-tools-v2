@@ -70,6 +70,56 @@ export const useAuthStore = create<AuthState>()(
           state.isLoading = false;
         }
       },
-    }
-  )
+    },
+  ),
+);
+
+type ThemeMode = "light" | "dark";
+
+interface DisplayModeState {
+  mode: ThemeMode;
+  setMode: (mode: ThemeMode) => void;
+  toggleMode: () => void;
+}
+
+export const useDisplayMode = create<DisplayModeState>()(
+  persist(
+    (set, get) => ({
+      mode: "light",
+
+      setMode: (mode) => {
+        if (typeof window !== "undefined") {
+          const html = document.documentElement;
+          html.classList.remove("light", "dark");
+          html.classList.add(mode);
+        }
+
+        set({ mode });
+      },
+
+      toggleMode: () => {
+        const current = get().mode;
+        const newMode = current === "light" ? "dark" : "light";
+
+        if (typeof window !== "undefined") {
+          const html = document.documentElement;
+          html.classList.remove("light", "dark");
+          html.classList.add(newMode);
+        }
+
+        set({ mode: newMode });
+      },
+    }),
+    {
+      name: "display-mode-storage",
+
+      onRehydrateStorage: () => (state) => {
+        if (state && typeof window !== "undefined") {
+          const html = document.documentElement;
+          html.classList.remove("light", "dark");
+          html.classList.add(state.mode);
+        }
+      },
+    },
+  ),
 );

@@ -97,7 +97,10 @@ export default function RequestDetailsPage() {
         <h2 className="text-xl font-semibold text-red-500">
           Request not found
         </h2>
-        <Button variant="link" onClick={() => router.back()}>
+        <Button
+          variant="link"
+          onClick={() => router.push("/internal-requisitions")}
+        >
           Go Back
         </Button>
       </div>
@@ -119,7 +122,7 @@ export default function RequestDetailsPage() {
   );
   const canProcess =
     ["pending", "outstanding"].includes(request.status) &&
-    (isDev||user?.department === "Finance" || user?.role === "admin");
+    (isDev || user?.department === "Finance" || user?.role === "admin");
   const isFullyPaid = amountRemaining === 0;
 
   // Handle approve / reject
@@ -128,9 +131,9 @@ export default function RequestDetailsPage() {
   ) => {
     if (!id) return;
     if (!request) return;
-   if (!isDev && user?.department !== "Finance" ) {
-  return toast.error("You are not authorized to update this request");
-}
+    if (!isDev && user?.department !== "Finance") {
+      return toast.error("You are not authorized to update this request");
+    }
     if (status !== "rejected") {
       if (!selectedBank) return toast.error("Please select a bank account.");
       if (!amountToPay || amountToPay <= 0)
@@ -174,14 +177,15 @@ export default function RequestDetailsPage() {
               {request.title}
             </h1>
             <Badge
-              className={`px-3 py-1 capitalize border-2 ${isFullyPaid
-                ? "bg-green-100 text-green-700 border-green-200"
-                : request.status === "outstanding"
-                  ? "bg-amber-100 text-amber-700 border-amber-200"
-                  : request.status === "rejected"
-                    ? "bg-red-100 text-red-700 border-red-200"
-                    : "bg-blue-50 text-blue-700 border-blue-200"
-                }`}
+              className={`px-3 py-1 capitalize border-2 ${
+                isFullyPaid
+                  ? "bg-green-100 text-green-700 border-green-200"
+                  : request.status === "outstanding"
+                    ? "bg-amber-100 text-amber-700 border-amber-200"
+                    : request.status === "rejected"
+                      ? "bg-red-100 text-red-700 border-red-200"
+                      : "bg-blue-50 text-blue-700 border-blue-200"
+              }`}
             >
               {isFullyPaid ? "Fully Paid" : request.status}
             </Badge>
@@ -243,7 +247,10 @@ export default function RequestDetailsPage() {
                 <TableBody>
                   {request.items.map((item) => (
                     <TableRow key={item._id}>
-                      <TableCell title={item.description} className="pl-6 font-medium truncate max-w-[200px]">
+                      <TableCell
+                        title={item.description}
+                        className="pl-6 font-medium truncate max-w-[200px]"
+                      >
                         {item.description}
                       </TableCell>
                       <TableCell className="text-center">
@@ -311,7 +318,6 @@ export default function RequestDetailsPage() {
                 </div>
               </CardContent>
             </Card>
-
           </div>
           <div className="mt-4">
             {request.attachments.length > 0 && (
