@@ -6,7 +6,10 @@ const itemSchema = new mongoose.Schema({
   quantity: { type: Number, required: true, min: 1 },
   unitPrice: { type: Number, required: true, min: 0 },
   unit: { type: String },
-  id: { type: String },
+  type: {
+    type: String,
+    enum: ["asset", "inventory"],
+  },
   total: {
     type: Number,
     default: function () {
@@ -67,7 +70,6 @@ const requisitionSchema = new mongoose.Schema(
       required: true,
       enum: ["expenses", "equipment-procured", "refunds", "other"],
     },
-
     requestedOn: { type: Date, default: Date.now },
     approvedOn: { type: Date, default: null },
     rejectedOn: { type: Date, default: null },

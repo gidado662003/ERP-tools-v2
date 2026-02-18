@@ -1,6 +1,9 @@
 const internalRequsitionsSchema = require("../../../models/internal-requsitions-schema");
 const InternalRequisition = require("../../../models/internal-requsitions-schema");
 const sendEmail = require("../../../helper/mailTemplate");
+const {
+  createProductsFromRequest,
+} = require("../../../services/inventory.service");
 
 async function getAllDataFigures(req, res) {
   try {
@@ -180,16 +183,15 @@ async function getDataById(req, res) {
 async function createRequest(req, res) {
   try {
     const laravelUser = req.user;
-
     const user = {
       name: laravelUser.name || laravelUser.username,
       email: laravelUser.email || "",
       department: laravelUser.department.name || laravelUser.department,
       role: laravelUser.role || "user",
     };
-    console.log(user);
 
     const items = JSON.parse(req.body.items);
+
     const accountToPay = JSON.parse(req.body.accountToPay);
 
     const attachments =
@@ -204,6 +206,7 @@ async function createRequest(req, res) {
       title: req.body.title,
       department: laravelUser.department.name,
       requestedOn: req.body.requestedOn,
+      type: req.body.type,
       accountToPay,
       requisitionNumber,
       totalAmount,
@@ -260,8 +263,6 @@ async function updateRequest(req, res) {
     }
 
     if (!request) return res.status(404).json({ message: "Not found" });
-
-    const previousStatus = request.status;
     request.status = data.status;
 
     if (data.status === "rejected") {
@@ -287,6 +288,10 @@ async function updateRequest(req, res) {
     }
 
     const response = await request.save();
+
+    if (data.status === "approved" || data.status === "completed") {
+      await createProductsFromRequest(request);
+    }
 
     // Calculate amounts for outstanding status
     const totalPaid = request.paymentHistory.reduce(

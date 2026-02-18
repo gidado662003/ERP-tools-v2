@@ -9,6 +9,7 @@ import {
   Calendar,
   Moon,
   Sun,
+  ShoppingCart,
 } from "lucide-react";
 import { useModuleStore } from "../lib/moduleStore";
 import { useDisplayMode } from "@/lib/store";
@@ -33,6 +34,13 @@ function HomePage() {
       href: "/internal-requisitions/",
       module: "request",
       gradient: "from-emerald-500 to-emerald-600",
+    },
+    {
+      name: "Inventory System",
+      icon: <ShoppingCart className="w-6 h-6" />,
+      href: "/inventory/",
+      module: "inventory",
+      gradient: "from-violet-500 to-violet-600",
     },
     {
       name: "Meeting App",

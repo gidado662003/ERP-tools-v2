@@ -17,6 +17,7 @@ export type Item = {
   description: string;
   quantity: number;
   unitPrice: number;
+  type: string;
   id: string;
   total: number;
   _id: string;
@@ -97,6 +98,7 @@ export type CreateRequisitionPayload = {
     description: string;
     quantity: number;
     unitPrice: number;
+    type: string | null;
     id: string;
     total: number;
   }[];

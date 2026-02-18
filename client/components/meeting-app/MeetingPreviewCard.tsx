@@ -21,7 +21,6 @@ const statusColors = {
 export default function MeetingPreviewCard({ meeting }: Props) {
   const date = new Date(meeting.date);
   const isPast = date < new Date();
-  console.log(meeting);
 
   return (
     <Link

@@ -63,7 +63,6 @@ const statusColors = {
 
 export default function Dashboard({ data }: { data: DashboardData }) {
   const { overview, insights } = data;
-  console.log(data);
 
   const monthlyChartData = data.monthlyTrends.map((m) => ({
     name: formatMonth(m._id.year, m._id.month),
@@ -82,7 +81,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
 
   const totalCategoryCount = data.categoryCount.reduce(
     (sum, c) => sum + c.count,
-    0
+    0,
   );
 
   return (
@@ -240,7 +239,9 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         {/* Category Distribution Table */}
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Category Distribution Table</CardTitle>
+            <CardTitle className="text-lg">
+              Category Distribution Table
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable

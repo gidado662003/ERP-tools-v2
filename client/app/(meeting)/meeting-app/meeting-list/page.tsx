@@ -8,12 +8,11 @@ import { mettingAppAPI } from "@/lib/mettingAppApi";
 export default function MeetingListBox() {
   const [meetings, setMeetings] = useState<MeetingPreview[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  console.log(meetings);
+
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const fetchMeetings = async () => {
       const response = await mettingAppAPI.getMeetings("", "");
-      console.log(response);
 
       setMeetings(response.meetings);
       setNextCursor(response.nextCursor);

@@ -30,7 +30,8 @@ function page() {
     items: [],
     attachement: [],
   });
-  console.log("loading", loading);
+  console.log(formData);
+
   const handleNextStep = () => {
     setCurrentStep(currentStep + 1);
   };
