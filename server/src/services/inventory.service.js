@@ -53,20 +53,40 @@ async function createProductsFromRequest(request) {
   }
 }
 
-async function getBatchProduct(id, quantity) {
+async function getBatchProducts() {
+  const batches = await ProcurementBatch.find()
+    .populate("product")
+    .populate("requisition");
+  return batches;
+}
+
+async function getBatchProduct(id, quantity, serialNumbers = []) {
   const batch = await ProcurementBatch.findById(id).populate("product");
-  console.log(batch);
   if (!batch) {
     throw new Error("Batch product not found");
   }
-  batch.receivedQuantity += quantity;
 
+  const remainingToReceive = batch.expectedQuantity - batch.receivedQuantity;
+  if (quantity > remainingToReceive || quantity <= 0) {
+    throw new Error(
+      `Quantity must be between 1 and ${remainingToReceive} (remaining to receive)`,
+    );
+  }
+
+  if (batch.product.trackIndividually) {
+    if (!Array.isArray(serialNumbers) || serialNumbers.length !== quantity) {
+      throw new Error(
+        `For assets, serialNumbers array must have length ${quantity} (one per unit)`,
+      );
+    }
+  }
+
+  batch.receivedQuantity += quantity;
   if (batch.receivedQuantity >= batch.expectedQuantity) {
     batch.status = "received";
   } else {
     batch.status = "partially_received";
   }
-
   await batch.save();
 
   if (!batch.product.trackIndividually) {
@@ -78,14 +98,13 @@ async function getBatchProduct(id, quantity) {
       },
       { upsert: true },
     );
-  }
-
-  if (batch.product.trackIndividually) {
+  } else {
     for (let i = 0; i < quantity; i++) {
       await Asset.create({
         product: batch.product._id,
         status: "IN_STOCK",
         location: batch.location,
+        serialNumber: serialNumbers[i] || "",
       });
     }
   }
@@ -104,6 +123,7 @@ async function getAssets() {
 }
 
 module.exports = {
+  getBatchProducts,
   getBatchProduct,
   createProductsFromRequest,
   getInventory,

@@ -10,7 +10,7 @@ const procurementBatchSchema = new mongoose.Schema(
 
     requisition: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Requisition",
+      ref: "InternalRequisition",
     },
 
     expectedQuantity: {

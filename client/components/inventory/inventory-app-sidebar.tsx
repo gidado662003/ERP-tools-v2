@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Users,
-  MessageSquareText,
-  Plus,
+  Package,
+  PackageCheck,
+  Tag,
   ArrowLeftRight,
 } from "lucide-react";
 
@@ -66,12 +66,22 @@ export default function InventorySidebar() {
         <NavItem
           href="/inventory/item-list"
           label="Items"
-          icon={<Users size={18} />}
+          icon={<Package size={18} />}
+        />
+        <NavItem
+          href="/inventory/assets"
+          label="Assets"
+          icon={<Tag size={18} />}
+        />
+        <NavItem
+          href="/inventory/batches"
+          label="Receive Goods"
+          icon={<PackageCheck size={18} />}
         />
         <NavItem
           href="/inventory/testing"
           label="Testing"
-          icon={<Users size={18} />}
+          icon={<Package size={18} />}
         />
       </nav>
 
