@@ -25,12 +25,14 @@ const batchProductController = {
   },
   getBatchProduct: async (req, res) => {
     try {
-      const { quantity, serialNumbers, performedBy } = req.body;
+      const { quantity, assetMetas, serialNumbers, performedBy } = req.body;
       const batchProduct = await getBatchProduct(
         req.params.id,
         quantity,
-        serialNumbers,
-        performedBy || (req.user && { name: req.user.name, email: req.user.email }),
+        assetMetas ?? [],
+        serialNumbers ?? [],
+        performedBy ||
+          (req.user && { name: req.user.name, email: req.user.email }),
       );
       res.status(200).json(batchProduct);
     } catch (error) {

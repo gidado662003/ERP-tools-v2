@@ -181,6 +181,8 @@ async function getDataById(req, res) {
 }
 
 async function createRequest(req, res) {
+  const isDev = process.env.NODE_ENV === "development";
+
   try {
     const laravelUser = req.user;
     const user = {
@@ -191,12 +193,9 @@ async function createRequest(req, res) {
     };
 
     const items = JSON.parse(req.body.items);
-
     const accountToPay = JSON.parse(req.body.accountToPay);
-
     const attachments =
       req.files?.map((file) => `/uploads/${file.filename}`) || [];
-
     const totalAmount = items.reduce((acc, item) => acc + item.total, 0);
 
     const date = new Date();
@@ -216,27 +215,29 @@ async function createRequest(req, res) {
       attachments,
       user,
     });
-    // Send notification email
+
     try {
-      await sendEmail({
-        to: process.env.NOTIFICATION_EMAIL,
-        subject: `New Internal Requisition: ${requisitionNumber}`,
-        text: `A new internal requisition ${requisitionNumber} has been submitted by ${user.name} from the ${user.department} department.`,
-        cc: user.email,
-        type: "requisition",
-        data: {
-          requisitionNumber,
-          requestedBy: user.name,
-          department: user.department,
-          email: user.email,
-          totalAmount,
-          category: req.body.category,
-          location: req.body.location,
-          title: req.body.title,
-          items: items,
-          routeId: request._id,
-        },
-      });
+      if (!isDev) {
+        await sendEmail({
+          to: process.env.NOTIFICATION_EMAIL,
+          subject: `New Internal Requisition: ${requisitionNumber}`,
+          text: `A new internal requisition ${requisitionNumber} has been submitted by ${user.name} from the ${user.department} department.`,
+          cc: user.email,
+          type: "requisition",
+          data: {
+            requisitionNumber,
+            requestedBy: user.name,
+            department: user.department,
+            email: user.email,
+            totalAmount,
+            category: req.body.category,
+            location: req.body.location,
+            title: req.body.title,
+            items: items,
+            routeId: request._id,
+          },
+        });
+      }
     } catch (emailError) {
       console.error("Error sending email:", emailError);
     }
@@ -293,96 +294,95 @@ async function updateRequest(req, res) {
       await createProductsFromRequest(request);
     }
 
-    // Calculate amounts for outstanding status
     const totalPaid = request.paymentHistory.reduce(
       (sum, payment) => sum + (payment.amount || 0),
       0,
     );
     const outstandingBalance = request.totalAmount - totalPaid;
 
-    // Calculate days pending (if status is pending)
     const daysPending = Math.floor(
       (new Date() - new Date(request.createdAt)) / (1000 * 60 * 60 * 24),
     );
 
-    // Send notification email to requester based on status change
     try {
-      if (data.status === "approved") {
-        await sendEmail({
-          to: request.user?.email || process.env.NOTIFICATION_EMAIL,
-          cc: process.env.NOTIFICATION_EMAIL,
-          subject: `Requisition Approved: ${request.requisitionNumber}`,
-          text: `Your requisition ${request.requisitionNumber} has been approved by ${req.user.name}.`,
-          type: "approval",
-          data: {
-            requisitionNumber: request.requisitionNumber,
-            approvedBy: {
-              name: req.user.name,
-              email: req.user.email,
-              department: req.user.department.name,
+      if (!isDev) {
+        if (data.status === "approved") {
+          await sendEmail({
+            to: request.user?.email || process.env.NOTIFICATION_EMAIL,
+            cc: process.env.NOTIFICATION_EMAIL,
+            subject: `Requisition Approved: ${request.requisitionNumber}`,
+            text: `Your requisition ${request.requisitionNumber} has been approved by ${req.user.name}.`,
+            type: "approval",
+            data: {
+              requisitionNumber: request.requisitionNumber,
+              approvedBy: {
+                name: req.user.name,
+                email: req.user.email,
+                department: req.user.department.name,
+              },
+              totalAmount: request.totalAmount,
+              comment: data.financeComment || "",
+              routeId: request._id,
             },
-            totalAmount: request.totalAmount,
-            comment: data.financeComment || "",
-            routeId: request._id,
-          },
-        });
-      } else if (data.status === "rejected") {
-        await sendEmail({
-          to: request.user?.email || process.env.NOTIFICATION_EMAIL,
-          cc: process.env.NOTIFICATION_EMAIL,
-          subject: `Requisition Rejected: ${request.requisitionNumber}`,
-          text: `Your requisition ${request.requisitionNumber} has been rejected by ${req.user.name}.`,
-          type: "rejection",
-          data: {
-            requisitionNumber: request.requisitionNumber,
-            rejectedBy: {
-              name: req.user.name,
-              email: req.user.email,
-              department: req.user.department.name,
+          });
+        } else if (data.status === "rejected") {
+          await sendEmail({
+            to: request.user?.email || process.env.NOTIFICATION_EMAIL,
+            cc: process.env.NOTIFICATION_EMAIL,
+            subject: `Requisition Rejected: ${request.requisitionNumber}`,
+            text: `Your requisition ${request.requisitionNumber} has been rejected by ${req.user.name}.`,
+            type: "rejection",
+            data: {
+              requisitionNumber: request.requisitionNumber,
+              rejectedBy: {
+                name: req.user.name,
+                email: req.user.email,
+                department: req.user.department.name,
+              },
+              comment: data.financeComment || request.comment || "",
+              routeId: request._id,
             },
-            comment: data.financeComment || request.comment || "",
-            routeId: request._id,
-          },
-        });
-      } else if (data.status === "outstanding") {
-        await sendEmail({
-          to: request.user?.email || process.env.NOTIFICATION_EMAIL,
-          cc: process.env.NOTIFICATION_EMAIL,
-          subject: `Requisition Partially Paid (Outstanding): ${request.requisitionNumber}`,
-          text: `Your requisition ${request.requisitionNumber} has been partially paid. Outstanding balance: ${outstandingBalance.toFixed(2)}`,
-          type: "outstanding",
-          data: {
-            requisitionNumber: request.requisitionNumber,
-            updatedBy: {
-              name: req.user.name,
-              email: req.user.email,
-              department: req.user.department.name,
+          });
+        } else if (data.status === "outstanding") {
+          await sendEmail({
+            to: request.user?.email || process.env.NOTIFICATION_EMAIL,
+            cc: process.env.NOTIFICATION_EMAIL,
+            subject: `Requisition Partially Paid (Outstanding): ${request.requisitionNumber}`,
+            text: `Your requisition ${request.requisitionNumber} has been partially paid. Outstanding balance: ${outstandingBalance.toFixed(2)}`,
+            type: "outstanding",
+            data: {
+              requisitionNumber: request.requisitionNumber,
+              updatedBy: {
+                name: req.user.name,
+                email: req.user.email,
+                department: req.user.department.name,
+              },
+              totalAmount: request.totalAmount,
+              paidAmount: totalPaid,
+              outstandingAmount: outstandingBalance,
+              comment: data.financeComment || "",
+              paymentHistory: request.paymentHistory,
+              routeId: request._id,
             },
-            totalAmount: request.totalAmount,
-            paidAmount: totalPaid,
-            outstandingAmount: outstandingBalance,
-            comment: data.financeComment || "",
-            paymentHistory: request.paymentHistory,
-            routeId: request._id,
-          },
-        });
-      } else if (data.status === "pending") {
-        await sendEmail({
-          to: request.user?.email || process.env.NOTIFICATION_EMAIL,
-          cc: process.env.NOTIFICATION_EMAIL,
-          subject: `Requisition Pending Review: ${request.requisitionNumber}`,
-          text: `Your requisition ${request.requisitionNumber} is currently pending review by the Finance team.`,
-          type: "pending",
-          data: {
-            requisitionNumber: request.requisitionNumber,
-            requestedBy: request.user?.name || "Unknown",
-            department: request.department || "",
-            totalAmount: request.totalAmount,
-            comment: data.financeComment || "",
-            daysPending: daysPending,
-            routeId: request._id,
-          },
-        });
+          });
+        } else if (data.status === "pending") {
+          await sendEmail({
+            to: request.user?.email || process.env.NOTIFICATION_EMAIL,
+            cc: process.env.NOTIFICATION_EMAIL,
+            subject: `Requisition Pending Review: ${request.requisitionNumber}`,
+            text: `Your requisition ${request.requisitionNumber} is currently pending review by the Finance team.`,
+            type: "pending",
+            data: {
+              requisitionNumber: request.requisitionNumber,
+              requestedBy: request.user?.name || "Unknown",
+              department: request.department || "",
+              totalAmount: request.totalAmount,
+              comment: data.financeComment || "",
+              daysPending: daysPending,
+              routeId: request._id,
+            },
+          });
+        }
       }
     } catch (emailError) {
       console.error("Error sending status email:", emailError);

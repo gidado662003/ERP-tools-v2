@@ -68,6 +68,7 @@ function page() {
       setLoading(false);
     }
   };
+  console.log(formData);
   return (
     <div>
       {/* <header className='flex flex-col gap-2'>

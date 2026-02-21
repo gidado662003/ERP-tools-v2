@@ -10,6 +10,7 @@ const itemSchema = new mongoose.Schema({
     type: String,
     enum: ["asset", "inventory"],
   },
+  supplier: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" },
   total: {
     type: Number,
     default: function () {

@@ -8,6 +8,15 @@ export type Product = {
   trackIndividually?: boolean;
 };
 
+export type EmployeeDTO = {
+  id: number;
+  name: string;
+  department?: {
+    id: number;
+    name: string;
+  };
+};
+
 export type InventoryItem = {
   _id: string;
   product: Product;
@@ -43,6 +52,19 @@ export type Asset = {
   updatedAt?: string;
 };
 
+// Grouped summary data returned by /asset/summary
+export type AssetGroup = {
+  productId: string;
+  productName: string;
+  category?: string;
+  total: number;
+  inStock: number;
+  assigned: number;
+  underMaintenance: number;
+  retired: number;
+  locations: string[];
+};
+
 export type InventoryMovement = {
   _id: string;
   product: Product;
@@ -61,31 +83,61 @@ export type InventoryMovement = {
   createdAt: string;
 };
 
-export type AssetHistory = {
-  _id: string;
-  asset: Asset | string;
-  action:
-    | "CREATED"
-    | "ASSIGNED"
-    | "RETURNED"
-    | "MAINTENANCE_STARTED"
-    | "MAINTENANCE_COMPLETED"
-    | "RETIRED"
-    | "LOCATION_CHANGED";
-  previousStatus?: string;
-  newStatus?: string;
-  previousLocation?: string;
-  newLocation?: string;
-  assignedTo?: {
-    name?: string;
-    email?: string;
-    department?: string;
-  };
-  performedBy?: {
-    name?: string;
-    email?: string;
-  };
-  notes?: string;
-  createdAt: string;
-};
+export type AssetEventType =
+  | "ASSIGN"
+  | "TRANSFER"
+  | "RETURN"
+  | "MAINTENANCE"
+  | "DISPOSE";
 
+export type HolderType = "EMPLOYEE" | "DEPARTMENT" | "EXTERNAL";
+
+export interface HolderSnapshot {
+  id: string;
+  name: string;
+  email?: string;
+}
+
+export interface PerformedBySnapshot {
+  id: string;
+  name: string;
+  email?: string;
+}
+
+export interface AssetHistory {
+  _id: string;
+  asset: string;
+
+  type: AssetEventType;
+
+  // Status transition
+  fromStatus?: string;
+  toStatus: string;
+
+  // Holder transition
+  fromHolderType?: HolderType;
+  fromHolderSnapshot?: HolderSnapshot | null;
+
+  toHolderType?: HolderType;
+  toHolderId?: string;
+  /** Populated object ref — present when snapshot is not used */
+  toHolder?: string;
+  toHolderSnapshot?: HolderSnapshot | null;
+
+  // Location
+  fromLocation?: string;
+  toLocation?: string;
+
+  // Who did this
+  performedById?: string;
+  /** Populated object ref — present when snapshot is not used */
+  performedBy?: string;
+  performedBySnapshot?: PerformedBySnapshot | null;
+
+  performedAt: string;
+  notes?: string;
+
+  createdAt: string;
+  updatedAt: string;
+  __v?: number;
+}

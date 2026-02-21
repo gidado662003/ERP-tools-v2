@@ -14,6 +14,7 @@ const Products = require("./inventory-system/products/products.routes");
 const BatchProduct = require("./inventory-system/batchProduct/batchProduct.routes");
 const InventoryMovements = require("./inventory-system/inventoryMovement/inventoryMovement.routes");
 const AssetHistoryRoutes = require("./inventory-system/assetHistory/assetHistory.routes");
+const Supplier = require("./supplier/supplier.route");
 const routes = express.Router();
 
 routes.use("/internalrequest/dashboard", dashboardMetrics);
@@ -29,4 +30,5 @@ routes.use("/products", Products);
 routes.use("/procurement-batches", BatchProduct);
 routes.use("/inventory-movements", InventoryMovements);
 routes.use("/asset-history", AssetHistoryRoutes);
+routes.use("/suppliers", Supplier);
 module.exports = routes;

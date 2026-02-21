@@ -1,106 +1,39 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { inventoryAPI } from "@/lib/inventoryApi";
-import type { Asset } from "@/lib/inventoryTypes";
-import { Package2, HardDrive, Users, MapPin } from "lucide-react";
+import { Package2, Users, MapPin } from "lucide-react";
 
-type AssetGroup = {
-  productId: string;
-  productName: string;
-  category?: string;
-  total: number;
-  inStock: number;
-  assigned: number;
-  underMaintenance: number;
-  retired: number;
-  locations: string[];
-};
+import type { AssetGroup } from "@/lib/inventoryTypes";
 
 export default function AssetsPage() {
-  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [groups, setGroups] = useState<AssetGroup[]>([]);
+  const [searchLoad, setSearchLoad] = useState(false);
 
   useEffect(() => {
     const fetchAssets = async () => {
       try {
-        const data = await inventoryAPI.getAssets();
-        setAssets(data || []);
+        setSearchLoad(true);
+        const data = await inventoryAPI.getAssetsSummary({ search });
+        setGroups(data);
       } catch (err) {
-        console.error("Failed to fetch assets:", err);
+        console.error("Failed to fetch assets summary:", err);
       } finally {
         setLoading(false);
+        setSearchLoad(false);
       }
     };
     fetchAssets();
-  }, []);
+  }, [search]);
 
-  const groups = useMemo<AssetGroup[]>(() => {
-    const map = new Map<string, AssetGroup>();
-
-    for (const a of assets) {
-      const id = a.product?._id;
-      if (!id) continue;
-
-      if (!map.has(id)) {
-        map.set(id, {
-          productId: id,
-          productName: a.product?.name || "Unnamed product",
-          category: a.product?.category,
-          total: 0,
-          inStock: 0,
-          assigned: 0,
-          underMaintenance: 0,
-          retired: 0,
-          locations: [],
-        });
-      }
-
-      const g = map.get(id)!;
-      g.total += 1;
-      if (a.location && !g.locations.includes(a.location)) {
-        g.locations.push(a.location);
-      }
-      switch (a.status) {
-        case "IN_STOCK":
-          g.inStock += 1;
-          break;
-        case "ASSIGNED":
-          g.assigned += 1;
-          break;
-        case "UNDER_MAINTENANCE":
-          g.underMaintenance += 1;
-          break;
-        case "RETIRED":
-          g.retired += 1;
-          break;
-      }
-    }
-
-    let list = Array.from(map.values());
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      list = list.filter((g) => {
-        const name = g.productName.toLowerCase();
-        const category = g.category?.toLowerCase() ?? "";
-        const locations = g.locations.join(" ").toLowerCase();
-        return (
-          name.includes(q) || category.includes(q) || locations.includes(q)
-        );
-      });
-    }
-    // sort by total descending
-    return list.sort((a, b) => b.total - a.total);
-  }, [assets, search]);
-
-  const totalAssets = assets.length;
   const distinctProducts = groups.length;
-  const inStock = assets.filter((a) => a.status === "IN_STOCK").length;
-  const assigned = assets.filter((a) => a.status === "ASSIGNED").length;
+  const inStock = groups.reduce((acc, g) => acc + g.inStock, 0);
+  const assigned = groups.reduce((acc, g) => acc + g.assigned, 0);
 
   if (loading) {
     return (
@@ -112,33 +45,14 @@ export default function AssetsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">Assets</h1>
-        <p className="text-muted-foreground">
-          Tracked items grouped by product. Click a product to see all its
-          assets and details.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-card p-4 shadow-sm flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white">
-            <HardDrive className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Total Assets
-            </p>
-            <p className="text-xl font-semibold">{totalAssets}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="rounded-xl border bg-card p-4 shadow-sm flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
             <Package2 className="h-5 w-5" />
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Products with Assets
+              Total Products
             </p>
             <p className="text-xl font-semibold">{distinctProducts}</p>
           </div>
@@ -169,8 +83,9 @@ export default function AssetsPage() {
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {groups.length} product{groups.length === 1 ? "" : "s"} with tracked
-          assets.
+          {searchLoad
+            ? "Searching..."
+            : `${groups.length} product${groups.length === 1 ? "" : "s"} with tracked assets.`}
         </p>
         <Input
           type="text"
@@ -244,4 +159,3 @@ export default function AssetsPage() {
     </div>
   );
 }
-

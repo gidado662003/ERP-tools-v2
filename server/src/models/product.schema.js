@@ -5,12 +5,6 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, unique: true },
     description: { type: String },
 
-    category: {
-      type: String,
-      enum: ["equipment", "consumable", "other"],
-      default: "equipment",
-    },
-
     unit: { type: String, default: "pcs" },
 
     status: {

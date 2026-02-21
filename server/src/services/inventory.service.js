@@ -2,11 +2,12 @@ const Product = require("../models/product.schema");
 const Inventory = require("../models/inventory.schema");
 const Asset = require("../models/asset.schema");
 const ProcurementBatch = require("../models/productBatch.schema");
+const Supplier = require("../models/supplier.schema");
 const InventoryMovement = require("../models/inventoryMovement.schema");
 const AssetHistory = require("../models/assetHistory.schema");
 
 async function createProductsFromRequest(request) {
-  console.log("Creating products from request:", request._id);
+  console.log("Creating products from request:", request);
   for (const item of request.items) {
     let product = await Product.findOne({
       name: item.description.trim().toLowerCase(),
@@ -26,8 +27,10 @@ async function createProductsFromRequest(request) {
       expectedQuantity: item.quantity,
       status: "awaiting_receipt",
       location: request.location,
+      supplier: item.supplier,
     });
     await batch.save();
+    console.log("Created batch:", batch);
 
     // 2️⃣ If Asset
     // if (item.type === "asset") {
@@ -55,6 +58,7 @@ async function createProductsFromRequest(request) {
   }
 }
 
+// Get all batches that are awaiting receipt or partially received, with product and requisition details
 async function getBatchProducts() {
   const batches = await ProcurementBatch.find({
     status: { $in: ["awaiting_receipt", "partially_received"] },
@@ -64,6 +68,7 @@ async function getBatchProducts() {
   return batches;
 }
 
+// Get batch by ID with product and requisition details
 async function getBatchById(id) {
   const batch = await ProcurementBatch.findById(id)
     .populate("product")
@@ -71,16 +76,15 @@ async function getBatchById(id) {
   return batch;
 }
 
+// Get batch by ID with product and requisition details, and process receiving the batch (update quantities, create assets if needed)
 async function getBatchProduct(
   id,
   quantity,
+  assetMetas = [],
   serialNumbers = [],
-  performedBy = {},
 ) {
   const batch = await ProcurementBatch.findById(id).populate("product");
-  if (!batch) {
-    throw new Error("Batch product not found");
-  }
+  if (!batch) throw new Error("Batch product not found");
 
   const remainingToReceive = batch.expectedQuantity - batch.receivedQuantity;
   if (quantity > remainingToReceive || quantity <= 0) {
@@ -90,64 +94,58 @@ async function getBatchProduct(
   }
 
   if (batch.product.trackIndividually) {
-    if (!Array.isArray(serialNumbers) || serialNumbers.length !== quantity) {
+    if (!Array.isArray(assetMetas) || assetMetas.length !== quantity) {
       throw new Error(
-        `For assets, serialNumbers array must have length ${quantity} (one per unit)`,
+        `For assets, assetMetas array must have length ${quantity} (one per unit)`,
       );
     }
+    // Ensure every unit has a serial number
+    assetMetas.forEach((meta, i) => {
+      if (!meta.serialNumber?.trim()) {
+        throw new Error(`Serial number is required for unit ${i + 1}`);
+      }
+    });
   }
 
   batch.receivedQuantity += quantity;
-  if (batch.receivedQuantity >= batch.expectedQuantity) {
-    batch.status = "received";
-  } else {
-    batch.status = "partially_received";
-  }
+  batch.status =
+    batch.receivedQuantity >= batch.expectedQuantity
+      ? "received"
+      : "partially_received";
   await batch.save();
 
   if (!batch.product.trackIndividually) {
-    const inv = await Inventory.findOne({ product: batch.product._id });
-    const previousQty = inv?.quantity ?? 0;
-    const newQty = previousQty + quantity;
-
     await Inventory.findOneAndUpdate(
       { product: batch.product._id },
       {
-        $inc: { quantity: quantity },
-        $set: { location: batch.location },
+        $inc: { quantity },
+        $set: { location: batch.location, supplier: batch.supplier },
       },
       { upsert: true },
     );
-
-    await InventoryMovement.create({
-      product: batch.product._id,
-      type: "PROCUREMENT",
-      quantity,
-      previousQuantity: previousQty,
-      newQuantity: newQty,
-      reference: batch._id,
-      referenceModel: "ProcurementBatch",
-      location: batch.location,
-      performedBy:
-        performedBy?.name || performedBy?.email ? performedBy : undefined,
+    await Supplier.findByIdAndUpdate(batch.supplier, {
+      $addToSet: { suppliedProducts: batch.product._id },
     });
   } else {
     for (let i = 0; i < quantity; i++) {
-      const asset = await Asset.create({
+      const meta = assetMetas[i];
+      await Asset.create({
         product: batch.product._id,
+        batch: batch._id,
         status: "IN_STOCK",
         location: batch.location,
-        serialNumber: serialNumbers[i] || "",
+        supplier: batch.supplier,
+        serialNumber: meta.serialNumber,
+        condition: meta.condition ?? "NEW",
+        category: meta.category ?? "equipment",
+        ownership: meta.ownership ?? "COMPANY",
+        purchaseDate: meta.purchaseDate
+          ? new Date(meta.purchaseDate)
+          : undefined,
+        notes: meta.notes || undefined,
       });
-
-      await AssetHistory.create({
-        asset: asset._id,
-        action: "CREATED",
-        newStatus: "IN_STOCK",
-        newLocation: batch.location,
-        performedBy:
-          performedBy?.name || performedBy?.email ? performedBy : undefined,
-        notes: serialNumbers[i] ? `Serial: ${serialNumbers[i]}` : undefined,
+      await Supplier.findByIdAndUpdate(batch.supplier, {
+        $addToSet: { suppliedProducts: batch.product._id },
       });
     }
   }

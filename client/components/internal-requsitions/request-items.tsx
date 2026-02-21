@@ -1,3 +1,4 @@
+// RequisitionItems.tsx
 "use client";
 import React, { useState } from "react";
 import {
@@ -27,6 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import SuppliersList from "./SuppliersList";
+
+// Extend Supplier type locally — ideally share from a types file
+type Supplier = {
+  _id: string;
+  name: string;
+  contactInfo: { email: string; phone: string; address: string };
+};
 
 type RequisitionItemsProps = {
   formData: CreateRequisitionPayload;
@@ -34,6 +43,14 @@ type RequisitionItemsProps = {
   onBack: () => void;
   onNext: () => void;
 };
+
+const ITEM_TYPES = [
+  { value: "asset", label: "Assets" },
+  { value: "inventory", label: "Inventory" },
+];
+
+const isEquipment = (formData: CreateRequisitionPayload) =>
+  formData.category === "equipment-procured";
 
 function RequisitionItems({
   formData,
@@ -49,7 +66,9 @@ function RequisitionItems({
     quantity: "",
     unitPrice: "",
     type: "",
+    supplier: null as Supplier | null,
   });
+  console.log(newItem);
 
   const newItemTotal =
     (parseFloat(newItem.quantity) || 0) * (parseFloat(newItem.unitPrice) || 0);
@@ -59,19 +78,30 @@ function RequisitionItems({
 
     const quantity = parseFloat(newItem.quantity) || 0;
     const unitPrice = parseFloat(newItem.unitPrice) || 0;
-    const total = quantity * unitPrice;
 
-    const item = {
-      description: newItem.description,
-      quantity,
-      unitPrice,
-      id: Date.now().toString(),
-      total,
-      type: newItem.type ? newItem.type : null,
-    };
+    setFormData((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          description: newItem.description,
+          quantity,
+          unitPrice,
+          id: Date.now().toString(),
+          total: quantity * unitPrice,
+          type: newItem.type || null,
+          supplier: newItem.supplier ?? null,
+        },
+      ],
+    }));
 
-    setFormData((prev) => ({ ...prev, items: [...prev.items, item] }));
-    setNewItem({ description: "", quantity: "", unitPrice: "", type: "" });
+    setNewItem({
+      description: "",
+      quantity: "",
+      unitPrice: "",
+      type: "",
+      supplier: null,
+    });
   };
 
   const removeItem = (id: string) => {
@@ -88,6 +118,7 @@ function RequisitionItems({
       quantity: string | number;
       unitPrice: string | number;
       type: string;
+      supplier: Supplier | null;
     }>,
   ) => {
     setFormData((prev) => ({
@@ -119,10 +150,7 @@ function RequisitionItems({
     Boolean(accountToPay.accountNumber?.trim()) &&
     Boolean(accountToPay.bankName?.trim());
 
-  const types = [
-    { value: "asset", label: "Assets" },
-    { value: "inventory", label: "Inventory" },
-  ];
+  const equipment = isEquipment(formData);
 
   return (
     <Card>
@@ -136,7 +164,8 @@ function RequisitionItems({
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-100 border border-slate-200/80 shadow-sm font-semibold text-slate-800">
+              {/* ── "New item" input row ── */}
+              <TableRow className="bg-gray-100 border border-slate-200/80 shadow-sm">
                 <TableCell className="font-semibold text-slate-800">
                   New
                 </TableCell>
@@ -182,26 +211,37 @@ function RequisitionItems({
                     }}
                   />
                 </TableCell>
-                {formData.category === "equipment-procured" && (
-                  <TableCell className="border-l border-slate-200/80">
-                    <Select
-                      value={newItem.type}
-                      onValueChange={(value) =>
-                        setNewItem({ ...newItem, type: value })
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {types.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
+                {equipment && (
+                  <>
+                    <TableCell className="border-l border-slate-200/80">
+                      <Select
+                        value={newItem.type}
+                        onValueChange={(value) =>
+                          setNewItem({ ...newItem, type: value })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ITEM_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    {/* ✅ Supplier column in new-item row, with onSelect wired up */}
+                    <TableCell className="border-l border-slate-200/80">
+                      <SuppliersList
+                        value={newItem.supplier}
+                        onSelect={(supplier) =>
+                          setNewItem({ ...newItem, supplier })
+                        }
+                      />
+                    </TableCell>
+                  </>
                 )}
                 <TableCell className="font-semibold text-slate-800 border-l border-slate-200/80">
                   {newItem.quantity && newItem.unitPrice ? (
@@ -212,18 +252,24 @@ function RequisitionItems({
                 </TableCell>
                 <TableCell />
               </TableRow>
+
+              {/* ── Column headers ── */}
               <TableRow>
                 <TableHead className="w-[50px]">#</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-[100px]">Qty</TableHead>
                 <TableHead className="w-[150px]">Unit Price (₦)</TableHead>
-                {formData.category === "equipment-procured" && (
-                  <TableHead className="w-[120px]">Type</TableHead>
+                {equipment && (
+                  <>
+                    <TableHead className="w-[120px]">Type</TableHead>
+                    <TableHead className="w-[200px]">Supplier</TableHead>
+                  </>
                 )}
                 <TableHead className="w-[150px]">Total (₦)</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {items.map((item, ind) => (
                 <TableRow key={item.id}>
@@ -243,9 +289,7 @@ function RequisitionItems({
                       placeholder="0"
                       value={item.quantity}
                       onChange={(e) =>
-                        updateItem(item.id, {
-                          quantity: e.target.value,
-                        })
+                        updateItem(item.id, { quantity: e.target.value })
                       }
                     />
                   </TableCell>
@@ -256,39 +300,44 @@ function RequisitionItems({
                       placeholder="0.00"
                       value={item.unitPrice}
                       onChange={(e) =>
-                        updateItem(item.id, {
-                          unitPrice: e.target.value,
-                        })
+                        updateItem(item.id, { unitPrice: e.target.value })
                       }
                     />
                   </TableCell>
-                  {formData.category === "equipment-procured" && (
-                    <TableCell>
-                      <Select
-                        value={item.type || ""}
-                        onValueChange={(value) =>
-                          updateItem(item.id, { type: value })
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {types.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+                  {equipment && (
+                    <>
+                      <TableCell>
+                        <Select
+                          value={item.type || ""}
+                          onValueChange={(value) =>
+                            updateItem(item.id, { type: value })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ITEM_TYPES.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      {/* ✅ Supplier column in existing item rows, also wired up */}
+                      <TableCell>
+                        <SuppliersList
+                          value={(item as any).supplier ?? null}
+                          onSelect={(supplier) =>
+                            updateItem(item.id, { supplier })
+                          }
+                        />
+                      </TableCell>
+                    </>
                   )}
                   <TableCell className="font-medium">
-                    {item.quantity != null && item.unitPrice != null ? (
-                      `₦ ${item.total.toLocaleString()}`
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    ₦ {item.total.toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -306,8 +355,7 @@ function RequisitionItems({
 
           {items.length > 0 && (
             <div className="p-4 border-t bg-muted/50">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-muted-foreground" />
+              <div className="flex justify-end">
                 <div className="text-lg font-semibold">
                   Total Amount: ₦ {totalAmount.toLocaleString()}
                 </div>
@@ -325,6 +373,7 @@ function RequisitionItems({
           </div>
         )}
 
+        {/* ── Payment Details ── */}
         <div className="border rounded-lg">
           <div className="p-4 border-b bg-muted/50">
             <h3 className="font-semibold">Payment Details</h3>

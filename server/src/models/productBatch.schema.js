@@ -29,6 +29,12 @@ const procurementBatchSchema = new mongoose.Schema(
       default: "awaiting_receipt",
     },
 
+    supplier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Supplier",
+      // required: true,
+    },
+
     location: String,
   },
   { timestamps: true },

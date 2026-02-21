@@ -6,6 +6,16 @@ import type {
   InventoryMovement,
   ProcurementBatch,
 } from "@/lib/inventoryTypes";
+import type { AssetGroup } from "@/lib/inventoryTypes";
+
+type AssetMeta = {
+  serialNumber: string;
+  condition: "NEW" | "GOOD" | "FAIR" | "DAMAGED";
+  category: "equipment" | "consumable" | "other";
+  ownership: "COMPANY" | "CUSTOMER";
+  purchaseDate: string;
+  notes: string;
+};
 
 const inventoryApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
@@ -24,16 +34,51 @@ export const inventoryAPI = {
     return res.data;
   },
 
+  getAssetsByID: async (assetId: string): Promise<Asset> => {
+    const res = await inventoryApi.get<Asset>(`/asset/${assetId}`);
+    return res.data;
+  },
+
+  getAssetsSummary: async (payload: { location?: string; search?: string }) => {
+    const params = new URLSearchParams();
+    if (payload.location) params.append("location", payload.location);
+    if (payload.search) params.append("search", payload.search);
+
+    const res = await inventoryApi.get<AssetGroup[]>(
+      `/asset/summary?${params.toString()}`,
+    );
+
+    return res.data;
+  },
+
+  createMovement: async (payload: any) => {
+    const res = await inventoryApi.post("/asset/movements", payload);
+    return res.data;
+  },
+
+  getAssetsByProduct: async (
+    productId: string,
+    search?: string,
+  ): Promise<Asset[]> => {
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+
+    const res = await inventoryApi.get<Asset[]>(
+      `/asset/product/${productId}?${params.toString()}`,
+    );
+    return res.data;
+  },
+
   getBatches: async (): Promise<ProcurementBatch[]> => {
     const res = await inventoryApi.get<ProcurementBatch[]>(
-      "/procurement-batches"
+      "/procurement-batches",
     );
     return res.data;
   },
 
   getBatchById: async (batchId: string): Promise<ProcurementBatch> => {
     const res = await inventoryApi.get<ProcurementBatch>(
-      `/procurement-batches/${batchId}`
+      `/procurement-batches/${batchId}`,
     );
     return res.data;
   },
@@ -52,7 +97,18 @@ export const inventoryAPI = {
 
   getAssetHistory: async (assetId: string): Promise<AssetHistory[]> => {
     const res = await inventoryApi.get<AssetHistory[]>(
-      `/asset-history/${assetId}`,
+      `/asset/movements/history/${assetId}`,
+    );
+    return res.data;
+  },
+
+  getAssetMovementsData: async (assetId: string, userSearch?: string) => {
+    const params = new URLSearchParams();
+
+    if (userSearch) params.append("userSearch", userSearch);
+
+    const res = await inventoryApi.get(
+      `/asset/movements/${assetId}?${params.toString()}`,
     );
     return res.data;
   },
@@ -62,13 +118,29 @@ export const inventoryAPI = {
     payload: {
       quantity: number;
       serialNumbers?: string[];
-      performedBy?: { name?: string; email?: string };
-    }
+      assetMetas?: AssetMeta[];
+    },
   ): Promise<ProcurementBatch> => {
     const res = await inventoryApi.post<ProcurementBatch>(
       `/procurement-batches/${batchId}`,
-      payload
+      payload,
     );
+    return res.data;
+  },
+
+  addSupplier: async (payload: {
+    name: string;
+    contactInfo: { email: string; phone: string; address: string };
+  }) => {
+    const res = await inventoryApi.post("/suppliers", payload);
+    return res.data;
+  },
+
+  getSuppliers: async (search?: string) => {
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+
+    const res = await inventoryApi.get("/suppliers", { params });
     return res.data;
   },
 };

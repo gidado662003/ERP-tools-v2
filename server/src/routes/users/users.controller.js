@@ -21,7 +21,6 @@ async function syncUserProfile(req, res) {
 
     const mappedRole = getMappedRole(erp_user.role);
 
-
     let user = await User.findOne({ email: erp_user.email });
 
     if (!user) {
@@ -71,9 +70,7 @@ async function getAllusers(req, res) {
 
     const currentUserEmail = req.user.email;
 
-    let filter = {
-      email: { $ne: currentUserEmail },
-    };
+    let filter = {};
     if (search) {
       filter = {
         $and: [

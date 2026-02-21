@@ -36,8 +36,7 @@ export default function BatchesPage() {
   }, []);
 
   const awaitingBatches = batches.filter(
-    (b) =>
-      b.status === "awaiting_receipt" || b.status === "partially_received"
+    (b) => b.status === "awaiting_receipt" || b.status === "partially_received",
   );
 
   const statusVariant = (status: string) => {
@@ -80,7 +79,9 @@ export default function BatchesPage() {
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">Location</TableHead>
                 <TableHead className="font-semibold">Requisition</TableHead>
-                <TableHead className="font-semibold text-right">Action</TableHead>
+                <TableHead className="font-semibold text-right">
+                  Action
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

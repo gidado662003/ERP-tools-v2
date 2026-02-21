@@ -88,11 +88,9 @@ export const useDisplayMode = create<DisplayModeState>()(
       mode: "light",
 
       setMode: (mode) => {
-        if (typeof window !== "undefined") {
-          const html = document.documentElement;
-          html.classList.remove("light", "dark");
-          html.classList.add(mode);
-        }
+        const html = document.documentElement;
+        html.classList.remove("light", "dark");
+        html.classList.add(mode);
 
         set({ mode });
       },

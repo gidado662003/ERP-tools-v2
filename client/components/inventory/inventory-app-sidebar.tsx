@@ -79,8 +79,8 @@ export default function InventorySidebar() {
           icon={<PackageCheck size={18} />}
         />
         <NavItem
-          href="/inventory/testing"
-          label="Testing"
+          href="/inventory/movements"
+          label="Movement"
           icon={<Package size={18} />}
         />
       </nav>
