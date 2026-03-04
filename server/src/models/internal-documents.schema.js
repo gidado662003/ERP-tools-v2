@@ -33,9 +33,10 @@ const documentSchema = new mongoose.Schema(
       required: true,
     },
     uploadedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      department: { type: String },
     },
   },
   { timestamps: true },

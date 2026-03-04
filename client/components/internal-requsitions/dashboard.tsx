@@ -63,7 +63,7 @@ const statusColors = {
 
 export default function Dashboard({ data }: { data: DashboardData }) {
   const { overview, insights } = data;
-  console.log("Dashboard data:", data);
+
 
   const monthlyChartData = data.monthlyTrends.map((m) => ({
     name: formatMonth(m._id.year, m._id.month),
@@ -73,7 +73,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
     pending: m.pending,
     rejected: m.rejected,
   }));
-  console.log(monthlyChartData);
+ 
 
   const categoryChartData = data.categoryCount.map((c) => ({
     name: c._id,

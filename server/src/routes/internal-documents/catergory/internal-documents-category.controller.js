@@ -7,7 +7,7 @@ const category = {
     try {
       const user = req.user;
       const department = user.department.name;
-      const categories = await getCategories(department);
+      const categories = await getCategories(user);
       res.status(200).json(categories);
     } catch (error) {
       console.error("Error in getCategoriesController:", error);
@@ -17,7 +17,6 @@ const category = {
   createCategoryController: async (req, res) => {
     try {
       const user = req.user;
-      console.log("User in createCategoryController:", user);
       const department = user.department.name;
       const { name } = req.body;
       if (!name) {
@@ -26,7 +25,12 @@ const category = {
       const newCategory = await createCategory({
         name: name,
         department: department,
-        createdBy: user.id,
+        createdBy: {
+          id: user.id.toString(),
+          name: user.displayName || user.name,
+          email: user.email,
+          department: user.department.name,
+        },
       });
       res.status(201).json(newCategory);
     } catch (error) {

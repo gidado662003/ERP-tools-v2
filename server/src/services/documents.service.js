@@ -29,7 +29,7 @@ const getCategories = async (user) => {
   try {
     let query = {};
 
-    if (user.role !== "admin") {
+    if (user.role !== "Admin Manager") {
       query.department = user.department.name.toLowerCase();
     }
 
@@ -72,7 +72,12 @@ const uploadDocument = async (file, fileData, user) => {
     fileSize: file.size,
     category: fileData.category,
     department: user.department.name,
-    uploadedBy: user.id,
+    uploadedBy: {
+      id: user.id.toString(),
+      name: user.displayName || user.name,
+      email: user.email,
+      department: user.department.name,
+    },
   };
   const response = await Document.create(dataBuild);
   return response;

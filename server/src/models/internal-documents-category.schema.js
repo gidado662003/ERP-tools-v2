@@ -7,12 +7,7 @@ const categorySchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    // slug: {
-    //   type: String,
-    //   required: true,
-    //   lowercase: true,
-    //   trim: true,
-    // },
+
     filesCount: {
       type: Number,
       default: 0,
@@ -24,9 +19,10 @@ const categorySchema = new mongoose.Schema(
       lowercase: true,
     },
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      department: { type: String },
     },
   },
   { timestamps: true },
