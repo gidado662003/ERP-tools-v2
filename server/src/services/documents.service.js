@@ -79,6 +79,7 @@ const uploadDocument = async (file, fileData, user) => {
       department: user.department.name,
     },
   };
+  console.log(dataBuild);
   const response = await Document.create(dataBuild);
   return response;
 };
