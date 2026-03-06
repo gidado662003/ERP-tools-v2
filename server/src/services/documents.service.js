@@ -29,9 +29,10 @@ const getCategories = async (user, queryFilter = {}, options = {}) => {
   try {
     const { q, sort } = queryFilter;
     const { includeDeleted = false } = options;
-
+    const canViewAll =
+      process.env.NODE_ENV === "development" || user.role === "Admin Manager";
     const query = {
-      ...(user.role !== "Admin Manager" && {
+      ...(!canViewAll && {
         department: user.department.name.toLowerCase(),
       }),
       ...(q && {
@@ -90,7 +91,6 @@ const createCategory = async (categoryData) => {
 };
 
 const uploadDocument = async (file, fileData, user) => {
-  console.log(file);
   const dataBuild = {
     name: fileData.name,
     fileName: fileData.fileName,
@@ -113,12 +113,17 @@ const uploadDocument = async (file, fileData, user) => {
 
 const getFilesByCategory = async (user, category) => {
   try {
-    const department = user.department.name.toLowerCase();
+    const canViewAll =
+      process.env.NODE_ENV === "development" || user.role === "Admin Manager";
 
-    return await Document.find({
-      department,
-      category: category,
-    })
+    const query = {
+      category,
+      ...(!canViewAll && {
+        department: user?.department?.name?.toLowerCase(),
+      }),
+    };
+
+    return await Document.find(query)
       .populate("category")
       .sort({ createdAt: -1 })
       .lean();

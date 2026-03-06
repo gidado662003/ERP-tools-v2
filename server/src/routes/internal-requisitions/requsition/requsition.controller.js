@@ -1,5 +1,7 @@
 const internalRequsitionsSchema = require("../../../models/internal-requsitions-schema");
 const InternalRequisition = require("../../../models/internal-requsitions-schema");
+const Category = require("../../../models/internal-documents-category.schema");
+const Document = require("../../../models/internal-documents.schema");
 const mongoose = require("mongoose");
 const sendEmail = require("../../../helper/mailTemplate");
 const {
@@ -227,6 +229,56 @@ async function createRequest(req, res) {
       user,
     });
 
+    // Auto-attach files to Finance document library
+    if (req.files?.length > 0 && req.body.category) {
+      try {
+        let category = await Category.findOne({
+          name: req.body.category.toLowerCase(),
+          department: "finance",
+        });
+
+        if (!category) {
+          category = await Category.create({
+            name: req.body.category.toLowerCase(),
+            department: "finance",
+            source: "auto",
+            createdBy: {
+              id: laravelUser.id.toString(),
+              name: user.name,
+              email: user.email,
+              department: user.department,
+            },
+          });
+        }
+
+        await Promise.all(
+          req.files.map((file) =>
+            Document.create({
+              name: file.originalname.replace(/\.[^.]+$/, ""),
+              fileName: file.originalname,
+              filePath: file.path,
+              fileSize: file.size,
+              mimeType: file.mimetype,
+              extension: file.originalname.split(".").pop().toLowerCase(),
+              department: "finance",
+              category: category._id,
+              source: "requisition",
+              requisitionId: request._id,
+              uploadedBy: {
+                id: laravelUser.id.toString(),
+                name: user.name,
+                email: user.email,
+                department: user.department,
+              },
+            }),
+          ),
+        );
+      } catch (attachmentError) {
+        console.error("Error auto-attaching documents:", attachmentError);
+      }
+    }
+
+    // Send notification email
     try {
       if (!isDev) {
         await sendEmail({
@@ -244,7 +296,7 @@ async function createRequest(req, res) {
             category: req.body.category,
             location: req.body.location,
             title: req.body.title,
-            items: items,
+            items,
             routeId: request._id,
           },
         });
@@ -253,7 +305,7 @@ async function createRequest(req, res) {
       console.error("Error sending email:", emailError);
     }
 
-    res.status(201).json("request");
+    res.status(201).json(request);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error submitting request" });

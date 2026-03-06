@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { documentsApi } from "@/lib/documentsApi";
@@ -7,7 +7,6 @@ import { DocumentCategory } from "@/lib/documentsTypes";
 import CreateCategoryModal from "@/components/documents/CreateCategoryModal";
 import UpdateCategoryModal from "@/components/documents/updateCategoryModal";
 
-// Shadcn UI imports
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -28,19 +27,33 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/store";
 import {
   Folder,
   FileText,
   Clock,
-  Users,
   Search,
   ArrowUpDown,
   X,
   Trash,
-  Edit,
+  ChevronRight,
+  LayoutGrid,
+  List,
 } from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type SortKey = "files-desc" | "files-asc" | "updated-desc" | "updated-asc";
 
@@ -48,8 +61,10 @@ const SORT_LABELS: Record<SortKey, string> = {
   "files-desc": "Most files",
   "files-asc": "Fewest files",
   "updated-desc": "Recently updated",
-  "updated-asc": "Least recently updated",
+  "updated-asc": "Oldest updated",
 };
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function DepartmentPage() {
   const { department } = useParams();
@@ -59,11 +74,12 @@ export function DepartmentPage() {
   const user = useAuthStore((state) => state.user);
 
   const query = searchParams.get("q") ?? "";
-  const sort = (searchParams.get("sort") ?? "name-asc") as SortKey;
+  const sort = (searchParams.get("sort") ?? "updated-desc") as SortKey;
   const view = (searchParams.get("view") ?? "grid") as "grid" | "list";
 
   const [categories, setCategories] = useState<DocumentCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const deptLabel = String(department).replace(/-/g, " ");
 
@@ -95,6 +111,18 @@ export function DepartmentPage() {
     fetchCategories();
   }, [fetchCategories]);
 
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await documentsApi.deleteCategory(id);
+      setCategories((prev) => prev.filter((c) => c._id !== id));
+    } catch (error) {
+      console.error("Failed to delete category:", error);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const totalFiles = categories.reduce(
     (acc, cat) => acc + (cat.filesCount ?? 0),
     0,
@@ -122,58 +150,34 @@ export function DepartmentPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight capitalize bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold tracking-tight capitalize">
                 {deptLabel}
               </h1>
-              <p className="text-muted-foreground mt-2 flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {totalFiles} {totalFiles === 1 ? "file" : "files"} •{" "}
+              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" />
+                {totalFiles} {totalFiles === 1 ? "file" : "files"} ·{" "}
                 {categories.length} categories
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* View toggle */}
-              <div className="flex items-center bg-muted rounded-lg p-1">
+              <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
                 <Button
                   variant={view === "grid" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setParam("view", "grid")}
-                  className="h-8"
+                  className="h-7 w-7 p-0"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                    />
-                  </svg>
+                  <LayoutGrid className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant={view === "list" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setParam("view", "list")}
-                  className="h-8"
+                  className="h-7 w-7 p-0"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
+                  <List className="h-3.5 w-3.5" />
                 </Button>
               </div>
 
@@ -185,8 +189,8 @@ export function DepartmentPage() {
             </div>
           </div>
 
-          {/* Search + Sort toolbar */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          {/* Search + Sort */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -199,7 +203,6 @@ export function DepartmentPage() {
                 <button
                   onClick={() => setParam("q", "")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -214,7 +217,7 @@ export function DepartmentPage() {
                   <span className="sm:hidden">Sort</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuRadioGroup
                   value={sort}
                   onValueChange={(v) => setParam("sort", v)}
@@ -229,7 +232,6 @@ export function DepartmentPage() {
             </DropdownMenu>
           </div>
 
-          {/* Result count when searching */}
           {query && !loading && (
             <p className="text-sm text-muted-foreground mb-4">
               {categories.length === 0
@@ -238,24 +240,18 @@ export function DepartmentPage() {
             </p>
           )}
 
-          <Separator className="mb-8" />
+          <Separator className="mb-6" />
 
           {/* Loading */}
           {loading ? (
             view === "grid" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <Card key={i} className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <div className="space-y-3">
-                        <Skeleton className="h-12 w-12 rounded-xl" />
-                        <Skeleton className="h-5 w-32" />
-                        <Skeleton className="h-4 w-24" />
-                        <div className="flex gap-2 pt-2">
-                          <Skeleton className="h-6 w-16" />
-                          <Skeleton className="h-6 w-16" />
-                        </div>
-                      </div>
+                  <Card key={i}>
+                    <CardContent className="p-5">
+                      <Skeleton className="h-10 w-10 rounded-xl mb-4" />
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-3 w-20" />
                     </CardContent>
                   </Card>
                 ))}
@@ -265,65 +261,57 @@ export function DepartmentPage() {
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Card key={i}>
                     <CardContent className="p-4">
-                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-10 w-full" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )
           ) : categories.length === 0 ? (
-            <Card className="col-span-full">
+            <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="rounded-full bg-primary/10 p-6 mb-6">
+                <div className="rounded-full bg-muted p-5 mb-4">
                   {query ? (
-                    <Search className="h-12 w-12 text-primary" />
+                    <Search className="h-8 w-8 text-muted-foreground" />
                   ) : (
-                    <Folder className="h-12 w-12 text-primary" />
+                    <Folder className="h-8 w-8 text-muted-foreground" />
                   )}
                 </div>
+                <h3 className="font-semibold mb-1">
+                  {query ? "No results found" : "No categories yet"}
+                </h3>
+                <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
+                  {query
+                    ? `No categories match "${query}"`
+                    : "Create your first category to start organizing documents."}
+                </p>
                 {query ? (
-                  <>
-                    <h3 className="text-2xl font-semibold mb-3">
-                      No results found
-                    </h3>
-                    <p className="text-muted-foreground text-center mb-6 max-w-md">
-                      No categories match{" "}
-                      <span className="font-medium">"{query}"</span>. Try a
-                      different search term.
-                    </p>
-                    <Button variant="outline" onClick={() => setParam("q", "")}>
-                      Clear search
-                    </Button>
-                  </>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setParam("q", "")}
+                  >
+                    Clear search
+                  </Button>
                 ) : (
-                  <>
-                    <h3 className="text-2xl font-semibold mb-3">
-                      No categories yet
-                    </h3>
-                    <p className="text-muted-foreground text-center mb-6 max-w-md">
-                      Get started by creating your first category. Organize your
-                      documents and make them easily accessible to your team.
-                    </p>
-                    <CreateCategoryModal
-                      deptLabel={deptLabel}
-                      onCreated={fetchCategories}
-                      createCategory={(name) =>
-                        documentsApi.createCategory(name)
-                      }
-                    />
-                  </>
+                  <CreateCategoryModal
+                    deptLabel={deptLabel}
+                    onCreated={fetchCategories}
+                    createCategory={(name) => documentsApi.createCategory(name)}
+                  />
                 )}
               </CardContent>
             </Card>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            /* ── Grid ── */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {categories.map((cat) => (
                 <Card
                   key={cat._id}
-                  className="group relative h-full flex flex-col hover:scale-[1.02] hover:ring-2 hover:ring-primary/20 hover:shadow-xl transition-all duration-300 overflow-hidden bg-card border-muted/60"
+                  className="group relative flex flex-col hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
-                  {/* Action Overlay: Top Right */}
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                  {/* Actions */}
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <UpdateCategoryModal
                       deptLabel={cat.name}
                       onCreated={fetchCategories}
@@ -331,105 +319,105 @@ export function DepartmentPage() {
                         documentsApi.renameCategory(name, cat._id)
                       }
                     />
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-sm hover:bg-red-50 text-red-600 border"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        documentsApi.deleteCategory(cat._id);
-                        fetchCategories();
-                      }}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          disabled={deletingId === cat._id}
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Delete "{cat.name}"?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will move the category to the bin. You can
+                            recover it later.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={() => handleDelete(cat._id)}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
 
-                  <CardContent className="p-6 flex-1">
-                    <div className="mb-5 inline-flex items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-900/20 p-4 border border-amber-100 dark:border-amber-900/30">
-                      <Folder className="h-8 w-8 text-yellow-500 fill-yellow-500/20" />
+                  <CardContent className="p-5 flex-1">
+                    <div className="mb-4 inline-flex items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-900/20 p-3 border border-amber-100 dark:border-amber-900/30">
+                      <Folder className="h-6 w-6 text-amber-500 fill-amber-500/20" />
                     </div>
-
-                    <div className="space-y-3">
-                      <h3 className="font-bold text-xl tracking-tight capitalize truncate group-hover:text-primary transition-colors">
-                        {cat.name}
-                      </h3>
-
-                      <div className="flex flex-wrap items-center gap-y-2 gap-x-3 text-sm text-muted-foreground/80">
-                        <div className="flex items-center gap-1.5 py-1 px-2 rounded-md bg-secondary/50">
-                          <FileText className="h-3.5 w-3.5" />
-                          <span className="font-medium text-foreground/80">
-                            {cat.filesCount ?? 0}{" "}
-                            {cat.filesCount === 1 ? "file" : "files"}
-                          </span>
-                        </div>
-                        {cat.updatedAt && (
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>
-                              {new Date(cat.updatedAt).toLocaleDateString(
-                                undefined,
-                                { month: "short", day: "numeric" },
-                              )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                    <h3 className="font-semibold capitalize truncate mb-2 group-hover:text-primary transition-colors">
+                      {cat.name}
+                    </h3>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        {cat.filesCount ?? 0}{" "}
+                        {cat.filesCount === 1 ? "file" : "files"}
+                      </span>
+                      {cat.updatedAt && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(cat.updatedAt).toLocaleDateString(
+                            undefined,
+                            { month: "short", day: "numeric" },
+                          )}
+                        </span>
+                      )}
                     </div>
                   </CardContent>
 
-                  {/* Footer acts as the Link */}
                   <CardFooter className="p-0 border-t">
                     <Link
                       href={`/documents/${department}/${cat._id}`}
-                      className="flex items-center justify-between w-full px-6 py-4 bg-muted/20 hover:bg-primary/[0.03] transition-colors group/link"
+                      className="flex items-center justify-between w-full px-5 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-background shadow-inner border border-muted/50 group-hover/link:border-primary/30 transition-colors">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 leading-none mb-1">
-                            Ownership
-                          </p>
-                          <p className="text-sm font-semibold text-foreground leading-none">
-                            {user?.role === "admin"
-                              ? cat.department
-                              : "Restricted"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center group-hover/link:bg-primary group-hover/link:text-primary-foreground transition-all">
-                        <ChevronRight className="h-5 w-5" />
-                      </div>
+                      <span className="text-xs font-medium">
+                        {user?.role === "admin"
+                          ? cat.department
+                          : "Open folder"}
+                      </span>
+                      <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </CardFooter>
                 </Card>
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
+            /* ── List ── */
+            <div className="space-y-1.5">
               {categories.map((cat) => (
-                <Link
-                  key={cat._id}
-                  href={`/documents/${department}/${cat._id}`}
-                  className="block group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
-                >
-                  <Card className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="rounded-lg p-2 bg-primary/10 text-primary border border-primary/20">
-                            <Folder className="h-5 w-5" />
+                <div key={cat._id} className="group flex items-center gap-3">
+                  <Link
+                    href={`/documents/${department}/${cat._id}`}
+                    className="flex-1 min-w-0"
+                  >
+                    <Card className="hover:border-primary/30 hover:bg-muted/30 transition-colors">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-lg p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 shrink-0">
+                            <Folder className="h-4 w-4 text-amber-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium truncate">{cat.name}</h3>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <p className="font-medium capitalize truncate text-sm">
+                              {cat.name}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                               <span>{cat.filesCount ?? 0} files</span>
                               {cat.updatedAt && (
                                 <>
-                                  <span>•</span>
+                                  <span>·</span>
                                   <span>
                                     Updated{" "}
                                     {new Date(
@@ -440,12 +428,55 @@ export function DepartmentPage() {
                               )}
                             </div>
                           </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                         </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  {/* List row actions */}
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <UpdateCategoryModal
+                      deptLabel={cat.name}
+                      onCreated={fetchCategories}
+                      createCategory={(name) =>
+                        documentsApi.renameCategory(name, cat._id)
+                      }
+                    />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          disabled={deletingId === cat._id}
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Delete "{cat.name}"?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will move the category to the bin. You can
+                            recover it later.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={() => handleDelete(cat._id)}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -454,19 +485,3 @@ export function DepartmentPage() {
     </TooltipProvider>
   );
 }
-
-const ChevronRight = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M9 5l7 7-7 7"
-    />
-  </svg>
-);

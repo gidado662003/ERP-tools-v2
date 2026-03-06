@@ -11,6 +11,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -37,10 +38,8 @@ import {
   X,
   ChevronLeft,
   Search,
-  ArrowUpDown,
+  ChevronDown,
 } from "lucide-react";
-
-// ─── File type helper ─────────────────────────────────────────────────────────
 
 type SortKey =
   | "name-asc"
@@ -58,8 +57,6 @@ const SORT_LABELS: Record<SortKey, string> = {
   "updated-desc": "Recently uploaded",
   "updated-asc": "Oldest first",
 };
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 export function CategoryPage() {
   const { department, category } = useParams();
@@ -156,12 +153,11 @@ export function CategoryPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Breadcrumb */}
-        <Breadcrumb className="mb-6">
+        <Breadcrumb className="mb-8">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink href="/documents">Documents</BreadcrumbLink>
@@ -183,20 +179,25 @@ export function CategoryPage() {
         </Breadcrumb>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold capitalize flex items-center gap-2">
-              <Link
-                href={`/documents/${department}`}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Link>
-              {catLabel}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {files.length} {files.length === 1 ? "file" : "files"}
-            </p>
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start gap-3">
+            <Link
+              href={`/documents/${department}`}
+              className="mt-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 capitalize">
+                {deptLabel}
+              </p>
+              <h1 className="text-2xl font-semibold capitalize">{catLabel}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {loading
+                  ? "—"
+                  : `${files.length} ${files.length === 1 ? "file" : "files"}`}
+              </p>
+            </div>
           </div>
 
           <input
@@ -211,7 +212,7 @@ export function CategoryPage() {
             size="sm"
           >
             <Upload className="h-4 w-4 mr-2" />
-            Upload File
+            Upload
           </Button>
         </div>
 
@@ -219,12 +220,12 @@ export function CategoryPage() {
 
         {/* Upload card */}
         {selectedFile && (
-          <Card className="mb-6 border-primary/50 bg-primary/5">
+          <Card className="mb-6 border-primary/40">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="rounded-lg p-2 bg-primary/10 shrink-0">
-                    <FileText className="h-5 w-5 text-primary" />
+                  <div className="rounded-lg p-2 bg-muted ring-1 ring-border shrink-0">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">
@@ -240,7 +241,7 @@ export function CategoryPage() {
                   variant="ghost"
                   onClick={handleCancel}
                   disabled={uploading}
-                  className="shrink-0 ml-2"
+                  className="shrink-0 ml-2 text-muted-foreground"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -248,7 +249,10 @@ export function CategoryPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div className="space-y-1.5">
-                  <Label htmlFor="display-name" className="text-xs">
+                  <Label
+                    htmlFor="display-name"
+                    className="text-xs text-muted-foreground"
+                  >
                     Display Name
                   </Label>
                   <Input
@@ -263,7 +267,10 @@ export function CategoryPage() {
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="file-name" className="text-xs">
+                  <Label
+                    htmlFor="file-name"
+                    className="text-xs text-muted-foreground"
+                  >
                     File Name
                   </Label>
                   <Input
@@ -279,7 +286,16 @@ export function CategoryPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancel}
+                  disabled={uploading}
+                  className="text-muted-foreground"
+                >
+                  Cancel
+                </Button>
                 <Button
                   size="sm"
                   onClick={handleUpload}
@@ -308,7 +324,7 @@ export function CategoryPage() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      Uploading...
+                      Uploading…
                     </>
                   ) : (
                     <>
@@ -345,10 +361,15 @@ export function CategoryPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 shrink-0">
-                <ArrowUpDown className="h-4 w-4" />
-                <span className="hidden sm:inline">{SORT_LABELS[sort]}</span>
+              <Button
+                variant="outline"
+                className="gap-2 shrink-0 text-muted-foreground"
+              >
+                <span className="hidden sm:inline text-foreground">
+                  {SORT_LABELS[sort]}
+                </span>
                 <span className="sm:hidden">Sort</span>
+                <ChevronDown className="h-4 w-4 opacity-60" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -370,17 +391,17 @@ export function CategoryPage() {
           <p className="text-sm text-muted-foreground mb-4">
             {files.length === 0
               ? `No files match "${query}"`
-              : `${files.length} ${files.length === 1 ? "file" : "files"} found`}
+              : `${files.length} ${files.length === 1 ? "result" : "results"} for "${query}"`}
           </p>
         )}
 
         {/* File grid */}
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+            {Array.from({ length: 10 }).map((_, i) => (
               <Card key={i}>
                 <CardContent className="p-4">
-                  <Skeleton className="h-12 w-12 rounded-xl mb-3" />
+                  <Skeleton className="h-10 w-10 rounded-lg mb-3" />
                   <Skeleton className="h-4 w-full mb-2" />
                   <Skeleton className="h-3 w-2/3" />
                 </CardContent>
@@ -388,21 +409,21 @@ export function CategoryPage() {
             ))}
           </div>
         ) : files.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-14">
               <div className="rounded-full bg-muted p-4 mb-4">
                 {query ? (
-                  <Search className="h-8 w-8 text-muted-foreground" />
+                  <Search className="h-6 w-6 text-muted-foreground" />
                 ) : (
-                  <FileText className="h-8 w-8 text-muted-foreground" />
+                  <FileText className="h-6 w-6 text-muted-foreground" />
                 )}
               </div>
-              <h3 className="font-medium mb-2">
+              <h3 className="font-medium mb-1">
                 {query ? "No files found" : "No files yet"}
               </h3>
-              <p className="text-sm text-muted-foreground text-center mb-4">
+              <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
                 {query
-                  ? `No files match "${query}"`
+                  ? `Nothing matched "${query}"`
                   : "Upload your first file to get started"}
               </p>
               {query ? (
@@ -435,23 +456,40 @@ export function CategoryPage() {
                   href={`/documents/${department}/${category}/${file._id}`}
                   className="block group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
                 >
-                  <Card className="h-full hover:border-primary/50 hover:shadow-md transition-all duration-200 overflow-hidden">
+                  <Card className="h-full hover:border-primary/50 hover:shadow-sm transition-all duration-200 overflow-hidden">
                     <CardContent className="p-4 pb-3">
                       <div
-                        className={`rounded-xl p-3 w-fit mb-3 ${typeInfo.color}`}
+                        className={`rounded-lg p-2.5 w-fit mb-3 ring-1 ring-black/5 dark:ring-white/10 ${typeInfo.color}`}
                       >
-                        {typeInfo.icon} {file.extension}
+                        {typeInfo.icon}
                       </div>
-                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors mb-1">
+                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors mb-1 leading-snug">
                         {file.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(file.fileSize)}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        {file.extension && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-1.5 py-0 h-4 font-medium uppercase tracking-wide"
+                          >
+                            {file.extension}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize(file.fileSize)}
+                        </span>
+                      </div>
                     </CardContent>
-                    <CardFooter className="px-4 py-2 flex items-center justify-between border-t bg-muted/30">
+                    <CardFooter className="px-4 py-2 flex items-center justify-between border-t bg-muted/20">
                       <span className="text-xs text-muted-foreground">
-                        {new Date(file.createdAt).toLocaleDateString()}
+                        {new Date(file.createdAt).toLocaleDateString(
+                          undefined,
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )}
                       </span>
                       <a
                         href={`/api/documents/download/${file._id}`}

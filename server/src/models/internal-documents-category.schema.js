@@ -28,6 +28,16 @@ const categorySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    requisitionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InternalRequisition",
+      default: null,
+    },
+    source: {
+      type: String,
+      enum: ["manual", "auto"],
+      default: "manual",
+    },
   },
   { timestamps: true },
 );

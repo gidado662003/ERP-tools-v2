@@ -21,7 +21,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["pdf"],
     label: "PDF",
     info: {
-      icon: <FileText className="h-6 w-6" />,
+      icon: <FileText className="h-5 w-5" />,
       color: "text-red-500 bg-red-500/10",
     },
   },
@@ -29,7 +29,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["doc", "docx"],
     label: "Word",
     info: {
-      icon: <FileText className="h-6 w-6" />,
+      icon: <FileText className="h-5 w-5" />,
       color: "text-blue-500 bg-blue-500/10",
     },
   },
@@ -37,7 +37,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["xls", "xlsx", "csv"],
     label: "Spreadsheet",
     info: {
-      icon: <FileSpreadsheet className="h-6 w-6" />,
+      icon: <FileSpreadsheet className="h-5 w-5" />,
       color: "text-green-500 bg-green-500/10",
     },
   },
@@ -45,7 +45,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["ppt", "pptx"],
     label: "Presentation",
     info: {
-      icon: <Presentation className="h-6 w-6" />,
+      icon: <Presentation className="h-5 w-5" />,
       color: "text-orange-500 bg-orange-500/10",
     },
   },
@@ -53,7 +53,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["jpg", "jpeg", "png", "gif", "webp", "svg"],
     label: "Image",
     info: {
-      icon: <FileImage className="h-6 w-6" />,
+      icon: <FileImage className="h-5 w-5" />,
       color: "text-purple-500 bg-purple-500/10",
     },
   },
@@ -61,7 +61,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["mp4", "mov", "avi", "mkv", "webm"],
     label: "Video",
     info: {
-      icon: <FileVideo className="h-6 w-6" />,
+      icon: <FileVideo className="h-5 w-5" />,
       color: "text-pink-500 bg-pink-500/10",
     },
   },
@@ -69,15 +69,15 @@ const FILE_CATEGORIES: Record<
     extensions: ["mp3", "wav", "ogg", "flac"],
     label: "Audio",
     info: {
-      icon: <FileAudio className="h-6 w-6" />,
+      icon: <FileAudio className="h-5 w-5" />,
       color: "text-yellow-500 bg-yellow-500/10",
     },
   },
   markdown: {
     extensions: ["md", "log"],
-    label: "Mark Down",
+    label: "Markdown",
     info: {
-      icon: <FileCode2 className="h-6 w-6" />,
+      icon: <FileCode2 className="h-5 w-5" />,
       color: "text-indigo-500 bg-indigo-500/10",
     },
   },
@@ -98,7 +98,7 @@ const FILE_CATEGORIES: Record<
     ],
     label: "Code",
     info: {
-      icon: <FileCode className="h-6 w-6" />,
+      icon: <FileCode className="h-5 w-5" />,
       color: "text-cyan-500 bg-cyan-500/10",
     },
   },
@@ -106,7 +106,7 @@ const FILE_CATEGORIES: Record<
     extensions: ["zip", "rar", "tar", "gz", "7z"],
     label: "Archive",
     info: {
-      icon: <FileArchive className="h-6 w-6" />,
+      icon: <FileArchive className="h-5 w-5" />,
       color: "text-amber-500 bg-amber-500/10",
     },
   },
@@ -125,7 +125,7 @@ export function getFileTypeInfo(extension: string = ""): FileTypeInfo {
 
   return (
     EXTENSION_MAP[ext] || {
-      icon: <File className="h-6 w-6" />,
+      icon: <File className="h-5 w-5" />,
       label: ext.toUpperCase() || "File",
       color: "text-muted-foreground bg-muted",
     }
