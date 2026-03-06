@@ -4,71 +4,99 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  FolderOpen,
-  Upload,
+  Trash2,
   ArrowLeftRight,
+  FileStack,
 } from "lucide-react";
 
 function NavItem({
   href,
   label,
   icon,
+  exact = false,
 }: {
   href: string;
   label: string;
   icon: React.ReactNode;
+  exact?: boolean;
 }) {
   const pathname = usePathname();
-  const active =
-    pathname === href || (href !== "/documents" && pathname?.startsWith(href));
+
+  const active = exact
+    ? pathname === href || pathname === href.replace(/\/$/, "")
+    : pathname?.startsWith(href) && !pathname?.startsWith("/documents/bin");
 
   return (
     <Link
       href={href}
       className={[
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition",
+        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
         active
-          ? "bg-accent text-blue-500 font-medium"
-          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-medium"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
       ].join(" ")}
     >
-      <span className="shrink-0">{icon}</span>
+      <span
+        className={[
+          "shrink-0 transition-colors",
+          active
+            ? "text-blue-500"
+            : "text-muted-foreground/70 group-hover:text-foreground",
+        ].join(" ")}
+      >
+        {icon}
+      </span>
       <span className="truncate">{label}</span>
+      {active && (
+        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+      )}
     </Link>
   );
 }
 
 export default function DocumentsSidebar() {
   return (
-    <div className="hidden w-64 shrink-0 border-r bg-card md:flex flex-col h-screen sticky top-0">
-      <div className="flex h-16 items-center px-4 border-b">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-500 text-primary-foreground font-bold">
-            DL
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold">Document Library</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-              Management
-            </div>
+    <div className="hidden w-60 shrink-0 border-r bg-card md:flex flex-col h-screen sticky top-0">
+      {/* Header */}
+      <div className="flex h-16 items-center gap-3 px-4 border-b">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500 text-white shrink-0">
+          <FileStack size={16} />
+        </div>
+        <div className="leading-tight min-w-0">
+          <div className="text-sm font-semibold truncate">Document Library</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+            Management
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <p className="px-3 pb-2 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/50">
+          Library
+        </p>
+
         <NavItem
           href="/documents"
           label="Documents"
-          icon={<LayoutDashboard size={18} />}
+          icon={<LayoutDashboard size={17} />}
+        />
+        <NavItem
+          href="/documents/bin"
+          label="Bin"
+          icon={<Trash2 size={17} />}
+          exact
         />
       </nav>
 
-      <footer className="mt-auto border-t p-4">
-        <Link href="/">
-          <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-            <ArrowLeftRight size={18} className="text-blue-500" />
-            <span>Switch Module</span>
-          </button>
+      {/* Footer */}
+      <footer className="border-t p-3">
+        <Link
+          href="/"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <ArrowLeftRight size={17} className="text-blue-500 shrink-0" />
+          <span>Switch Module</span>
         </Link>
       </footer>
     </div>

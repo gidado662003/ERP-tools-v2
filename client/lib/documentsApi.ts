@@ -18,9 +18,27 @@ export const documentsApi = {
       throw error;
     }
   },
-  getCategories: async () => {
+  getCategories: async ({ q, sort }: { q: string; sort: string }) => {
     try {
-      const response = await api.get(`/document-categories`);
+      const response = await api.get(`/document-categories`, {
+        params: {
+          q,
+          sort,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  getDeletedCategories: async ({ q, sort }: { q: string; sort: string }) => {
+    try {
+      const response = await api.get(`/document-categories/delete`, {
+        params: {
+          q,
+          sort,
+        },
+      });
       return response.data;
     } catch (error) {
       throw error;
@@ -29,6 +47,32 @@ export const documentsApi = {
   createCategory: async (name: string) => {
     try {
       const response = await api.post("/document-categories", { name });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  renameCategory: async (name: string, id: string) => {
+    try {
+      const response = await api.put(`/document-categories/rename/${id}`, {
+        name,
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  deleteCategory: async (id: string) => {
+    try {
+      const response = await api.put(`/document-categories/delete/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  recoverCategory: async (id: string) => {
+    try {
+      const response = await api.put(`/document-categories/recover/${id}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -46,9 +90,17 @@ export const documentsApi = {
       throw error;
     }
   },
-  getFilesByCategory: async (category: string | string[]) => {
+  getFilesByCategory: async (
+    category: string | string[],
+    { q, sort }: { q: string; sort: string },
+  ) => {
     try {
-      const response = await api.get(`/document/files/${category}`);
+      const response = await api.get(`/document/files/${category}`, {
+        params: {
+          q,
+          sort,
+        },
+      });
       return response.data;
     } catch (error) {
       throw error;

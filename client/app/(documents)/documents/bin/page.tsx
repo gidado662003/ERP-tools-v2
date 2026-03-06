@@ -1,12 +1,12 @@
 import React from "react";
-import { DepartmentPage } from "@/components/documents/DepartmentPage";
 import { Suspense } from "react";
+import { DeletedCategoriesPage } from "@/components/documents/DeletedCategoriesPage";
 
 function page() {
   return (
     <div>
       <Suspense>
-        <DepartmentPage />
+        <DeletedCategoriesPage />
       </Suspense>
     </div>
   );

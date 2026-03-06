@@ -124,7 +124,7 @@ function HomePage() {
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-gradient-to-br from-[#3B82F6] to-[#6366F1]">
             <Grid3X3 size={14} color="white" />
           </div>
-          <span className="text-xs font-semibold tracking-tight text-[#F8FAFC]">
+          <span className="text-xs font-semibold tracking-tight ">
             Syscodes Tools
           </span>
         </div>

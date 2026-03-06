@@ -14,6 +14,8 @@ export interface DocumentFile {
   fileName: string;
   filePath: string;
   fileSize: number;
+  extension: string;
+  mimeType: string;
   department: string;
   category: string | DocumentCategory;
   uploadedBy: {

@@ -27,6 +27,8 @@ const documentSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+    mimeType: { type: String, required: true },
+    extension: { type: String, required: true },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
