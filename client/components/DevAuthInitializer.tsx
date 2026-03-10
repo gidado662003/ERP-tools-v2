@@ -14,10 +14,11 @@ export default function DevAuthInitializer() {
     // 👇 This must match what backend mock user returns
     setUser({
       _id: "698ee293492c9e5f2de4108c",
-       username: "dev.user",
-          email: "dev@test.com",
-          role: "admin",
-          department: "Development",
+      username: "dev.user",
+      email: "dev@test.com",
+      displayName: "Dev User",
+      role: "admin",
+      department: "Development",
     });
 
     console.log("Mock user injected");

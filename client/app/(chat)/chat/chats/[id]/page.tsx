@@ -34,6 +34,7 @@ import { useAuthStore } from "@/lib/store";
 import { AddToGroup, GroupInfoModal } from "@/components/settingModals";
 import { SettingDropdown } from "@/components/settingDropdDown";
 import { ForwardeMessageModal } from "@/components/settingModals";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -398,12 +399,38 @@ export default function ChatPage({ params }: ChatPageProps) {
   const sendMessage = () => {
     if (!message.trim()) return;
 
+    // Extract mentions from message text for group chats
+    let mentions: string[] | undefined = undefined;
+    if (chat?.type === "group" && Array.isArray(chat.participants)) {
+      const mentionedUsernames = Array.from(
+        new Set(
+          (message.match(/@([a-zA-Z0-9_]+)/g) || []).map((m) =>
+            m.slice(1).toLowerCase(),
+          ),
+        ),
+      );
+
+      if (mentionedUsernames.length > 0) {
+        const usernameToId = new Map<string, string>();
+        chat.participants.forEach((p: any) => {
+          if (p?.username && p?._id) {
+            usernameToId.set(p.username.toLowerCase(), p._id);
+          }
+        });
+
+        mentions = mentionedUsernames
+          .map((uname) => usernameToId.get(uname))
+          .filter((id): id is string => Boolean(id));
+      }
+    }
+
     socket.emit("send_message", {
       chatId: id,
       text: message,
       senderId: currentUserId,
       timestamp: new Date().toISOString(),
       replyToMessageId: replyingTo?._id || null, // NEW: Send reply ID
+      mentions,
     });
 
     setMessage("");
@@ -554,8 +581,12 @@ export default function ChatPage({ params }: ChatPageProps) {
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">
       {/* ---------- HEADER ---------- */}
-      <header className="flex items-center justify-between px-10 p-4 border-b bg-white/95 backdrop-blur-md z-20 shadow-sm">
+      <header className="flex items-center justify-between px-4 sm:px-6 lg:px-10 p-4 border-b bg-white/95 backdrop-blur-md z-20 shadow-sm">
         <div className="flex items-center gap-3">
+          {/* Mobile sidebar trigger */}
+          <div className="md:hidden mr-1">
+            <SidebarTrigger className="h-9 w-9" />
+          </div>
           <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
             {(chat?.type === "group" ? groupInfo?.name : user?.username)
               ?.charAt(0)
@@ -758,6 +789,7 @@ export default function ChatPage({ params }: ChatPageProps) {
 
                 {dayMessages.map((msg) => {
                   const isMine = msg.senderId?._id === currentUserId;
+                  const mentionsMe = msg.mentions?.includes(currentUserId);
 
                   return (
                     <div
@@ -773,7 +805,8 @@ export default function ChatPage({ params }: ChatPageProps) {
       isMine
         ? "bg-blue-600 text-white rounded-tr-none shadow-blue-200/40 hover:shadow-md"
         : "bg-white border border-gray-200 rounded-tl-none text-gray-800 hover:shadow-md"
-    }`}
+    }
+    ${mentionsMe ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-50" : ""}`}
                           >
                             {/* Sender Name */}
                             {!isMine && (
@@ -827,36 +860,53 @@ export default function ChatPage({ params }: ChatPageProps) {
                                   </div>
                                 )}
 
-                                {/* FILE */}
+                                {/* FILE / DOCUMENT */}
                                 {msg.type === "file" && (
-                                  <a
-                                    href={`${API_URL}${msg.fileUrl}`}
-                                    download
-                                    className={`flex items-center gap-3 p-3 rounded-xl border mb-2 transition-all no-underline
+                                  (() => {
+                                    const name = msg.fileName || "";
+                                    const ext =
+                                      name.split(".").pop()?.toLowerCase() || "";
+                                    let label = "File";
+                                    if (["pdf"].includes(ext)) label = "PDF Document";
+                                    else if (["ppt", "pptx"].includes(ext))
+                                      label = "PowerPoint";
+                                    else if (["doc", "docx"].includes(ext))
+                                      label = "Word Document";
+                                    else if (["xls", "xlsx"].includes(ext))
+                                      label = "Excel Spreadsheet";
+
+                                    return (
+                                      <a
+                                        href={`${API_URL}${msg.fileUrl}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-3 p-3 rounded-xl border mb-2 transition-all no-underline
             ${
               isMine
                 ? "bg-blue-700/30 border-blue-400/30 text-white hover:bg-blue-700/40"
                 : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"
             }`}
-                                  >
-                                    <div
-                                      className={`p-2 rounded-lg shrink-0
+                                      >
+                                        <div
+                                          className={`p-2 rounded-lg shrink-0
               ${isMine ? "bg-blue-500" : "bg-gray-200 text-gray-600"}`}
-                                    >
-                                      <FiFileText size={20} />
-                                    </div>
+                                        >
+                                          <FiFileText size={20} />
+                                        </div>
 
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-semibold truncate">
-                                        {msg.fileName}
-                                      </p>
-                                      <p className="text-[10px] uppercase font-bold opacity-60 tracking-wide">
-                                        Download File
-                                      </p>
-                                    </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-semibold truncate">
+                                            {name || "Document"}
+                                          </p>
+                                          <p className="text-[10px] uppercase font-bold opacity-60 tracking-wide">
+                                            {label} • Click to open
+                                          </p>
+                                        </div>
 
-                                    <FiDownload className="opacity-50 shrink-0" />
-                                  </a>
+                                        <FiDownload className="opacity-50 shrink-0" />
+                                      </a>
+                                    );
+                                  })()
                                 )}
 
                                 {/* TEXT MESSAGE */}

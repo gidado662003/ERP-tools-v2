@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
+import { FiFileText } from "react-icons/fi";
 import { useAuthStore } from "@/lib/store";
 import {
   createGroupChat,
@@ -19,6 +20,7 @@ import {
   createOrGetPrivateChat,
   getGroupInfo,
   getUserChats,
+  updateGroupAdmin,
 } from "@/app/api";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/app/api";
@@ -64,6 +66,11 @@ export function CreateGroupChatModal() {
   };
 
   const handleCreateGroup = async () => {
+    if (!groupData.groupName?.trim()) {
+      setError("Group name is required");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
     setSuccess("");
@@ -82,9 +89,23 @@ export function CreateGroupChatModal() {
     }
   };
   return (
-    <Dialog>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Prevent closing while request is in-flight
+        if (isLoading) return;
+        setOpen(next);
+      }}
+    >
       <DialogTrigger asChild>
-        <Button variant="outline">New Group</Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setOpen(true);
+          }}
+        >
+          New Group
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -111,6 +132,8 @@ export function CreateGroupChatModal() {
             />
           </div>
         </div>
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        {success && <p className="text-xs text-green-600 mt-1">{success}</p>}
         <DialogFooter className="sm:justify-start">
           <Button type="button" variant="secondary" onClick={handleCreateGroup}>
             {isLoading ? "Creating Group..." : "Create Group"}
@@ -242,59 +265,97 @@ export function ImagePreviewModal({
   onSend: (uploadedUrl: string, type: string) => void;
   selectedFile: File | null;
 }) {
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleSend = async () => {
+    if (!selectedFile || isUploading) return;
+
+    setIsUploading(true);
     try {
       const response = await uploadFile(selectedFile);
       const uploadedUrl = response.url;
       let type = "file"; // default
-      if (selectedFile) {
-        if (selectedFile.type.startsWith("image/")) {
-          type = "image";
-        } else if (selectedFile.type.startsWith("video/")) {
-          type = "video";
-        } else {
-          type = "file"; // for documents
-        }
+      if (selectedFile.type.startsWith("image/")) {
+        type = "image";
+      } else if (selectedFile.type.startsWith("video/")) {
+        type = "video";
+      } else {
+        type = "file"; // for documents
       }
       onSend(uploadedUrl, type);
+      onClose();
     } catch (error) {
       console.error("Failed to upload file:", error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
+  const isImage = !!selectedFile && selectedFile.type.startsWith("image/");
+  const isVideo = !!selectedFile && selectedFile.type.startsWith("video/");
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Prevent closing while upload is in progress
+        if (!open && !isUploading) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Image Preview</DialogTitle>
+          <DialogTitle>File Preview</DialogTitle>
           <DialogDescription>
-            Preview the selected image before sending.
+            Preview the selected file before sending.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex justify-center">
-          {imageUrl && (
+        <div className="flex flex-col items-center gap-3">
+          {isImage && imageUrl && (
             <img
               src={imageUrl}
               alt="Image Preview"
               className="max-w-full max-h-96 object-contain rounded-lg"
             />
           )}
+          {isVideo && imageUrl && (
+            <video
+              src={imageUrl}
+              className="max-w-full max-h-96 rounded-lg"
+              controls
+            />
+          )}
+          {!isImage && !isVideo && selectedFile && (
+            <div className="flex items-center gap-3 p-3 rounded-xl border bg-gray-50 w-full">
+              <div className="p-2 rounded-lg bg-gray-200 text-gray-700">
+                <FiFileText size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+            disabled={isUploading}
+            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              handleSend();
-              onClose();
-            }}
-            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded"
+            onClick={handleSend}
+            disabled={isUploading || !selectedFile}
+            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Send
+            {isUploading ? "Sending..." : "Send"}
           </button>
         </div>
       </DialogContent>
@@ -304,7 +365,9 @@ export function ImagePreviewModal({
 
 export function GroupInfoModal({ chatId }: { chatId: string }) {
   const router = useRouter();
+  const { user: currentUser } = useAuthStore();
   const [groupInfo, setGroupInfo] = useState<any>(null);
+  const [updatingAdminId, setUpdatingAdminId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGroupInfo();
@@ -315,6 +378,25 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
       setGroupInfo(response.group);
     } catch (error) {
       console.error("Failed to fetch group info:", error);
+    }
+  };
+
+  const currentUserIsAdmin =
+    !!currentUser &&
+    groupInfo?.admins?.some(
+      (admin: User) => admin._id === currentUser._id,
+    );
+
+  const handleMakeAdmin = async (userId: string) => {
+    if (!currentUserIsAdmin) return;
+    setUpdatingAdminId(userId);
+    try {
+      await updateGroupAdmin({ userId, chatId });
+      await fetchGroupInfo();
+    } catch (error) {
+      console.error("Failed to promote user to admin:", error);
+    } finally {
+      setUpdatingAdminId(null);
     }
   };
   const goToChat = async (userId: string) => {
@@ -422,9 +504,8 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {groupInfo.members.map((member: User) => (
                       <div
-                        onClick={() => goToChat(member._id)}
                         key={member._id}
-                        className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                           {member.username?.charAt(0).toUpperCase()}
@@ -437,9 +518,31 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
                             {member.email}
                           </p>
                         </div>
-                        <div
-                          className={`w-3 h-3 rounded-full ${member.isOnline ? "bg-green-400" : "bg-gray-300"}`}
-                        ></div>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-3 h-3 rounded-full ${member.isOnline ? "bg-green-400" : "bg-gray-300"}`}
+                          ></div>
+                          <button
+                            onClick={() => goToChat(member._id)}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            Message
+                          </button>
+                          {currentUserIsAdmin &&
+                            !groupInfo.admins.some(
+                              (admin: User) => admin._id === member._id,
+                            ) && (
+                              <button
+                                onClick={() => handleMakeAdmin(member._id)}
+                                disabled={updatingAdminId === member._id}
+                                className="text-xs text-green-700 hover:underline disabled:opacity-50"
+                              >
+                                {updatingAdminId === member._id
+                                  ? "Making admin..."
+                                  : "Make admin"}
+                              </button>
+                            )}
+                        </div>
                       </div>
                     ))}
                   </div>

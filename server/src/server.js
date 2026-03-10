@@ -22,6 +22,9 @@ const io = new Server(server, {
   },
 });
 
+// Make io accessible from express routes/controllers (e.g. webhook)
+app.set("io", io);
+
 io.on("connection", async (socket) => {
   const userId = socket.handshake.auth.userId;
   try {
@@ -133,6 +136,26 @@ io.on("connection", async (socket) => {
         }
       }
 
+      // Validate and normalize mentions (only for normal chats)
+      let validMentions = [];
+      if (data.chatId && Array.isArray(data.mentions) && data.mentions.length) {
+        try {
+          const chatForMentions = await Chat.findById(data.chatId).select(
+            "participants",
+          );
+          if (chatForMentions) {
+            const participantIds = new Set(
+              chatForMentions.participants.map((p) => p.toString()),
+            );
+            validMentions = data.mentions.filter((id) =>
+              participantIds.has(id.toString()),
+            );
+          }
+        } catch (mentionsErr) {
+          console.error("Error validating mentions:", mentionsErr);
+        }
+      }
+
       // Prepare message data
       const messageData = {
         text: data.text,
@@ -143,6 +166,7 @@ io.on("connection", async (socket) => {
         type: data.type || "text",
         fileUrl: data.fileUrl,
         fileName: data.fileName,
+        mentions: validMentions,
 
         // Forwarded message fields
         forwardedMessage: data.forwardedMessage || false,

@@ -4,8 +4,7 @@ import { authAPI } from "../app/api";
 import { useAuthStore } from "../lib/store";
 
 export default function TokenHandler() {
-  const { user, setUser, } = useAuthStore();
-  
+  const { user, setUser } = useAuthStore();
 
   useEffect(() => {
     try {
@@ -18,7 +17,7 @@ export default function TokenHandler() {
           const serverOrigin = `${window.location.protocol}//${window.location.hostname}:5001`;
 
           // Step 1: Exchange token for cookie
-   
+
           const response = await fetch(`${serverOrigin}/auth/token`, {
             method: "POST",
             credentials: "include",
@@ -29,12 +28,10 @@ export default function TokenHandler() {
             sessionStorage.setItem("erp_token", token);
           }
           const data = await response.json();
-       
 
           // Step 2: Sync user profile in our MongoDB (authoritative user record)
-          
-          const syncResponse = await authAPI.syncUserProfile();
 
+          const syncResponse = await authAPI.syncUserProfile();
 
           // Step 3: Store user in auth store
           if (syncResponse.user) {

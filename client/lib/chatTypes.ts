@@ -1,6 +1,7 @@
 export interface User {
   _id: string;
   username: string;
+  displayName?: string;
   email?: string;
   avatar?: string;
   isOnline?: boolean;
@@ -20,9 +21,10 @@ export interface Message {
   isDeleted?: boolean;
   forwardedMessage?: boolean;
   messageToForward?: Message;
-   // NEW REPLY FIELDS
+  // NEW REPLY FIELDS
   replyTo?: string; // ID of the message being replied to
-  replyToSnapshot?: ReplyToSnapshot; 
+  replyToSnapshot?: ReplyToSnapshot;
+  mentions?: string[];
 }
 
 export interface GroupInfo {
@@ -45,7 +47,7 @@ export interface Chat {
 export interface ReplyToSnapshot {
   _id: string;
   text: string;
-  type: 'text' | 'image' | 'video' | 'file';
+  type: "text" | "image" | "video" | "file";
   fileName?: string;
   fileUrl?: string;
   senderId: {

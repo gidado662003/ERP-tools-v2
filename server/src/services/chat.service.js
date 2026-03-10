@@ -1,6 +1,6 @@
 const Chat = require("../models/chat.schema");
 const User = require("../models/user.schema");
-const Message = require("../models/message.schema")
+const Message = require("../models/message.schema");
 const { makePrivateChatKey } = require("../helper/createPrivateChatId");
 
 async function getOrCreatePrivateChat(userA, userB) {
@@ -47,6 +47,53 @@ async function createGroup(userId, groupName, groupDescription) {
     return null;
   }
   return group;
+}
+
+async function getOrCreateTicketsGroup() {
+  const groupName = "All Tickets Raised";
+
+  let chat = await Chat.findOne({
+    type: "group",
+    groupName,
+  });
+
+  if (chat) {
+    const systemUserId =
+      chat.groupAdmins[0] ||
+      chat.participants[0] ||
+      null;
+    return { chat, systemUserId };
+  }
+
+  // Use all admins as group admins, fall back to all users if no admins yet
+  let admins = await User.find({ role: "admin" }).select("_id");
+  if (!admins.length) {
+    admins = await User.find().select("_id");
+  }
+
+  if (!admins.length) {
+    throw new Error("No users available to own the tickets group");
+  }
+
+  const adminIds = admins.map((a) => a._id);
+
+  chat = await Chat.create({
+    type: "group",
+    participants: adminIds,
+    groupName,
+    groupDescription: "System group for all externally raised tickets",
+    groupMembers: adminIds,
+    groupAdmins: adminIds,
+    groupMessages: [],
+    groupLastMessage: null,
+  });
+
+  await User.updateMany(
+    { _id: { $in: adminIds } },
+    { $addToSet: { joinedRooms: chat._id } },
+  );
+
+  return { chat, systemUserId: adminIds[0] };
 }
 
 async function getUserChats(userId, search) {
@@ -150,6 +197,40 @@ async function pinMessage(chatId, messageId) {
   }
 }
 
+async function addAdminToGroup(userId, chatId, actingUserId) {
+  const chat = await Chat.findById(chatId);
+  if (!chat) {
+    throw new Error("Chat not found");
+  }
+  if (chat.type !== "group") {
+    throw new Error("Can only update admins for group chats");
+  }
+
+  const isActingAdmin = chat.groupAdmins
+    .map((id) => id.toString())
+    .includes(actingUserId.toString());
+  if (!isActingAdmin) {
+    throw new Error("Only group admins can promote other members");
+  }
+
+  const isParticipant = chat.participants
+    .map((id) => id.toString())
+    .includes(userId.toString());
+  if (!isParticipant) {
+    throw new Error("User must be a participant of the group to become admin");
+  }
+
+  const updatedChat = await Chat.findByIdAndUpdate(
+    chatId,
+    { $addToSet: { groupAdmins: userId } },
+    { new: true },
+  ).populate("groupAdmins", "username email avatar isOnline lastSeen");
+
+  return {
+    admins: updatedChat.groupAdmins,
+  };
+}
+
 async function unpinMessage(chatId, messageId) {
   try {
     const chat = await Chat.findOneAndUpdate(
@@ -184,4 +265,6 @@ module.exports = {
   addUserToGroup,
   pinMessage,
   unpinMessage,
+  getOrCreateTicketsGroup,
+  addAdminToGroup,
 };

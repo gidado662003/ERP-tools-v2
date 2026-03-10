@@ -5,6 +5,11 @@ import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuthStore } from "@/lib/store";
 import SocketInitializer from "@/components/SocketInitializer";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
 export default function RootLayout({
   children,
@@ -45,13 +50,17 @@ export default function RootLayout({
       ) : isLandingPage ? (
         <div className="h-full">{children}</div>
       ) : (
-        // App pages with permanent sidebar
-        <div className="flex h-screen">
-          <AppSidebar />
-          <main className="flex-1 overflow-hidden">
-            <div className="h-full overflow-auto">{children}</div>
-          </main>
-        </div>
+        // App pages with responsive sidebar
+        <SidebarProvider>
+          <Sidebar>
+            <AppSidebar />
+          </Sidebar>
+          <SidebarInset>
+            <main className="flex-1 overflow-hidden h-screen">
+              <div className="h-full overflow-auto">{children}</div>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
       )}
     </>
   );

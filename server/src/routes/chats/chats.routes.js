@@ -9,16 +9,26 @@ const {
   addUserToGroupController,
   uploadFileController,
   getGroupInfo,
-  pinMessageController
+  pinMessageController,
+  updateGroupAdminController,
+  ticketWebhookController,
+  listTicketsController,
+  getTicketController,
+  getTicketMessagesController,
 } = require("./chats.controller");
 const upload = require("../../config/multerconfig");
 
 router.post("/private", createOrGetPrivateChat);
+router.post("/tickets/webhook", ticketWebhookController);
+router.get("/tickets", listTicketsController);
+router.get("/tickets/:ticketId", getTicketController);
+router.get("/tickets/:ticketId/messages", getTicketMessagesController);
 router.get("/group/:chatId", getGroupInfo);
 router.get("/:chatId", getPrivateChatById);
 router.get("/user/chats", getUserChatsController);
 router.post("/group", createGroupChat);
 router.put("/group", addUserToGroupController);
+router.post("/group/admin", updateGroupAdminController);
 router.post("/upload", upload.single("file"), uploadFileController);
 router.post("/pinMessage", pinMessageController)
 // router.get("/:chatId", getChatWithUser);

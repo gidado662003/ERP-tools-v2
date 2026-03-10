@@ -12,7 +12,7 @@ app.use(cookieParser());
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || "http://localhost:3000", // Allow your frontend
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Tickets-Key", "X-Tickets-Token"],
   credentials: true, // Allow cookies/auth headers
 };
 

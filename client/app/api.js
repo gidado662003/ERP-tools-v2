@@ -43,9 +43,11 @@ export const authAPI = {
 };
 
 // User management functions
-export async function getAllusers() {
+export async function getAllusers(search) {
   try {
-    const response = await api.get("/user");
+    const response = await api.get("/user", {
+      params: search ? { search } : {},
+    });
     return response.data;
   } catch (error) {
     console.error("Get users error:", error);
@@ -141,6 +143,52 @@ export async function addUserToGroup(groupData) {
     return response.data;
   } catch (error) {
     console.error("Add user to group error:", error);
+    throw error;
+  }
+}
+
+export async function updateGroupAdmin(groupData) {
+  try {
+    const response = await api.post("/chats/group/admin", {
+      userId: groupData.userId,
+      chatId: groupData.chatId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Update group admin error:", error);
+    throw error;
+  }
+}
+
+// Tickets API functions
+export async function listTickets(params) {
+  try {
+    const response = await api.get("/chats/tickets", { params });
+    return response.data;
+  } catch (error) {
+    console.error("List tickets error:", error);
+    throw error;
+  }
+}
+
+export async function getTicket(ticketId) {
+  try {
+    const response = await api.get(`/chats/tickets/${ticketId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Get ticket error:", error);
+    throw error;
+  }
+}
+
+export async function getTicketMessages(ticketId, limit) {
+  try {
+    const response = await api.get(`/chats/tickets/${ticketId}/messages`, {
+      params: limit ? { limit } : {},
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Get ticket messages error:", error);
     throw error;
   }
 }

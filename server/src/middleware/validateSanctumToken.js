@@ -5,9 +5,33 @@ const AUTH_MODE = process.env.AUTH_MODE || "laravel";
 
 const LARAVEL_BACKEND_URL =
   process.env.LARAVEL_BACKEND_URL || "http://10.10.253.3:8000";
+const TICKETS_WEBHOOK_KEY = process.env.TICKETS_WEBHOOK_KEY;
 
 async function validateSanctumToken(req, res, next) {
   try {
+    // Special handling for external tickets webhook using static env key
+    if (req.path === "/chats/tickets/webhook") {
+      if (!TICKETS_WEBHOOK_KEY) {
+        console.error(
+          "TICKETS_WEBHOOK_KEY is not set in environment for tickets webhook",
+        );
+        return res.status(500).json({
+          message: "Webhook key is not configured",
+        });
+      }
+
+      const providedKey =
+        req.headers["x-tickets-key"] || req.headers["x-tickets-token"];
+
+      if (!providedKey || providedKey !== TICKETS_WEBHOOK_KEY) {
+        return res.status(401).json({
+          message: "Unauthorized: invalid webhook key",
+        });
+      }
+
+      return next();
+    }
+
     /* =========================================================
        🔥 MOCK AUTH MODE (Development Only)
     ========================================================= */
@@ -25,14 +49,14 @@ async function validateSanctumToken(req, res, next) {
       }
 
       req.user = req.user = {
-    id: mongoUser._id,
-    name: mongoUser.displayName || mongoUser.username,
-    email: mongoUser.email,
-    role: mongoUser.role,
-    department: {
-      name: mongoUser.department || "Development",
-    },
-  };
+        id: mongoUser._id,
+        name: mongoUser.displayName || mongoUser.username,
+        email: mongoUser.email,
+        role: mongoUser.role,
+        department: {
+          name: mongoUser.department || "Development",
+        },
+      };
       req.userId = mongoUser._id.toString();
 
       console.log("🧪 MOCK AUTH ACTIVE:", mongoUser.displayName);
@@ -86,17 +110,13 @@ async function validateSanctumToken(req, res, next) {
         : "user";
 
     let mongoUser = await User.findOne({
-      $or: [
-        { email: laravelUser.email },
-        { laravel_id: laravelUser.id },
-      ],
+      $or: [{ email: laravelUser.email }, { laravel_id: laravelUser.id }],
     });
 
     /* ================= CREATE USER ================= */
 
     if (!mongoUser) {
-      const baseFromEmail =
-        laravelUser.email?.split("@")[0] || "";
+      const baseFromEmail = laravelUser.email?.split("@")[0] || "";
 
       const baseFromName =
         laravelUser.name
@@ -106,19 +126,14 @@ async function validateSanctumToken(req, res, next) {
           .replace(/[^a-z0-9_.-]/g, "") || "";
 
       const baseUsername =
-        baseFromEmail ||
-        baseFromName ||
-        `user${laravelUser.id}` ||
-        "user";
+        baseFromEmail || baseFromName || `user${laravelUser.id}` || "user";
 
       let attempt = 0;
       let created = false;
 
       while (!created && attempt < 5) {
         const suffix =
-          attempt === 0
-            ? ""
-            : `${attempt}${Math.floor(Math.random() * 1000)}`;
+          attempt === 0 ? "" : `${attempt}${Math.floor(Math.random() * 1000)}`;
 
         const username = `${baseUsername}${suffix}`;
 
@@ -128,9 +143,7 @@ async function validateSanctumToken(req, res, next) {
             email: laravelUser.email,
             laravel_id: laravelUser.id,
             department:
-              laravelUser.department?.name ||
-              laravelUser.department ||
-              null,
+              laravelUser.department?.name || laravelUser.department || null,
             displayName: laravelUser.name || "",
             phone: laravelUser.phone || null,
             avatar: laravelUser.profile_photo_url || null,
@@ -139,10 +152,7 @@ async function validateSanctumToken(req, res, next) {
 
           created = true;
         } catch (createErr) {
-          if (
-            createErr?.code === 11000 &&
-            createErr?.keyPattern?.username
-          ) {
+          if (createErr?.code === 11000 && createErr?.keyPattern?.username) {
             attempt += 1;
             continue;
           }
@@ -154,16 +164,12 @@ async function validateSanctumToken(req, res, next) {
       if (!created || !mongoUser) {
         throw new Error("Failed to create synced user");
       }
-    }
+    } else {
 
     /* ================= UPDATE USER ================= */
+      mongoUser.displayName = laravelUser.name || mongoUser.displayName;
 
-    else {
-      mongoUser.displayName =
-        laravelUser.name || mongoUser.displayName;
-
-      mongoUser.phone =
-        laravelUser.phone || mongoUser.phone;
+      mongoUser.phone = laravelUser.phone || mongoUser.phone;
 
       mongoUser.role = mappedRole;
 
@@ -175,9 +181,7 @@ async function validateSanctumToken(req, res, next) {
         mongoUser.department;
 
       mongoUser.avatar =
-        laravelUser.profile_photo_url ||
-        mongoUser.avatar ||
-        null;
+        laravelUser.profile_photo_url || mongoUser.avatar || null;
 
       await mongoUser.save();
     }
