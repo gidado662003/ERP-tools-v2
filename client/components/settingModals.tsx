@@ -157,12 +157,12 @@ export function AddToGroup({ chatId }: { chatId: string }) {
 
   useEffect(() => {
     fetchUsersForGroup();
-  }, []);
+  }, [search]);
 
   const fetchUsersForGroup = async () => {
     setLoading(true);
     try {
-      const response = await getAllusers();
+      const response = await getAllusers(search);
       setAllUsers(response.data?.users || []);
     } catch (error) {
       console.error("AddToGroup: Error fetching users:", error);
@@ -383,9 +383,7 @@ export function GroupInfoModal({ chatId }: { chatId: string }) {
 
   const currentUserIsAdmin =
     !!currentUser &&
-    groupInfo?.admins?.some(
-      (admin: User) => admin._id === currentUser._id,
-    );
+    groupInfo?.admins?.some((admin: User) => admin._id === currentUser._id);
 
   const handleMakeAdmin = async (userId: string) => {
     if (!currentUserIsAdmin) return;

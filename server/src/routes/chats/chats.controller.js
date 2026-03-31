@@ -177,7 +177,7 @@ async function addUserToGroupController(req, res) {
 async function uploadFileController(req, res) {
   try {
     const file = req.file;
-    const fileUrl = `/uploads/${file.filename}`;
+    const fileUrl = `/uploads/chat/${file.filename}`;
 
     res.status(200).json({
       url: fileUrl,
@@ -218,11 +218,9 @@ async function getGroupInfo(req, res) {
     );
 
     if (!isMember) {
-      return res
-        .status(403)
-        .json({
-          message: "Access denied. You are not a member of this group.",
-        });
+      return res.status(403).json({
+        message: "Access denied. You are not a member of this group.",
+      });
     }
 
     const groupInfo = {
@@ -340,10 +338,11 @@ async function ticketWebhookController(req, res) {
           assignedEngineerName:
             assignedEngineerName ?? existingTicket?.assignedEngineerName ?? "",
           assignedEngineerEmail:
-            assignedEngineerEmail ?? existingTicket?.assignedEngineerEmail ?? "",
+            assignedEngineerEmail ??
+            existingTicket?.assignedEngineerEmail ??
+            "",
           chatId: chat._id,
-          lastEventType:
-            eventType || (isNewTicket ? "created" : "updated"),
+          lastEventType: eventType || (isNewTicket ? "created" : "updated"),
           lastEventAt: now,
           lastPayload: req.body || null,
         },
@@ -352,9 +351,7 @@ async function ticketWebhookController(req, res) {
     );
 
     const lines = [];
-    lines.push(
-      `🎫 Ticket ${isNewTicket ? "Created" : "Updated"}: ${ticketId}`,
-    );
+    lines.push(`🎫 Ticket ${isNewTicket ? "Created" : "Updated"}: ${ticketId}`);
     lines.push(`Title: ${title ?? existingTicket?.title ?? ""}`.trim());
 
     if (clientName || existingTicket?.clientName) {
@@ -510,7 +507,9 @@ async function getTicketController(req, res) {
     const { ticketId } = req.params;
     const ticket = await Ticket.findOne({ ticketId });
     if (!ticket) {
-      return res.status(404).json({ success: false, error: "Ticket not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Ticket not found" });
     }
     res.status(200).json({ success: true, ticket });
   } catch (error) {
@@ -524,7 +523,9 @@ async function getTicketMessagesController(req, res) {
     const { ticketId } = req.params;
     const ticket = await Ticket.findOne({ ticketId }).select("chatId ticketId");
     if (!ticket) {
-      return res.status(404).json({ success: false, error: "Ticket not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Ticket not found" });
     }
     if (!ticket.chatId) {
       return res.status(400).json({

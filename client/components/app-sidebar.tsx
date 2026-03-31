@@ -19,6 +19,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { socket } from "@/lib/socket";
 import { useModuleStore } from "../lib/moduleStore";
+import { ChatUserGuide } from "./chatUserGuide";
 
 interface Chat {
   _id: string;
@@ -220,6 +221,9 @@ export function AppSidebar() {
             <Hash className="h-4 w-4 text-blue-500" /> Tickets
           </Link>
         )}
+        <div>
+          <ChatUserGuide />
+        </div>
       </div>
 
       {/* Tabs: Chats / Users */}

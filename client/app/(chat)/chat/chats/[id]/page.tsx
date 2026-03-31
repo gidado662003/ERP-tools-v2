@@ -19,8 +19,8 @@ import {
   FiPhoneCall,
   FiMoreVertical,
   FiPhoneForwarded,
-  FiCornerUpLeft, // NEW: Reply icon
-  FiX, // NEW: Close icon
+  FiCornerUpLeft,
+  FiX,
   FiSearch,
 } from "react-icons/fi";
 import { useSocketStore } from "../../../../../store/useSocketStore";
@@ -86,18 +86,12 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
 
-  // NEW: Reply state
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Base URL for serving uploaded files (images, videos, documents).
-  // In production behind Apache, set NEXT_PUBLIC_FILE_BASE_URL to "" or to the
-  // public origin (e.g. https://chat.example.com) so that /uploads is proxied.
-  // In local development without a reverse proxy, set it to
-  // http://localhost:5001 so files are loaded directly from Express.
   const API_URL =
     process.env.NEXT_PUBLIC_FILE_BASE_URL ||
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") ||
@@ -106,11 +100,9 @@ export default function ChatPage({ params }: ChatPageProps) {
   useEffect(() => {
     if (chat?.type === "group") {
       const lastAtIndex = message.lastIndexOf("@");
-
       if (lastAtIndex !== -1) {
         const textAfterAt = message.slice(lastAtIndex + 1);
         const hasSpace = textAfterAt.includes(" ");
-
         if (!hasSpace) {
           setMentionQuery(textAfterAt.toLowerCase());
           setIsMentionOpen(true);
@@ -128,13 +120,11 @@ export default function ChatPage({ params }: ChatPageProps) {
     }
   }, [message, chat?.type]);
 
-  // Filter participants based on search
   const filteredParticipants =
     chat?.participants?.filter((part: any) =>
       part.username.toLowerCase().includes(mentionQuery),
     ) || [];
 
-  // Grouping Logic
   const getDateKey = (isoDate: string) => {
     const d = new Date(isoDate);
     return d.toISOString().split("T")[0];
@@ -164,13 +154,9 @@ export default function ChatPage({ params }: ChatPageProps) {
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-
     const dayDate = new Date(dayKey);
-
     if (dayDate.toDateString() === today.toDateString()) return "Today";
-
     if (dayDate.toDateString() === yesterday.toDateString()) return "Yesterday";
-
     return new Date(dayKey).toLocaleDateString(undefined, {
       weekday: "long",
       month: "short",
@@ -196,7 +182,6 @@ export default function ChatPage({ params }: ChatPageProps) {
           lastMessageIdRef.current =
             initialMessages[initialMessages.length - 1]._id;
         }
-
         if (
           messagesData.data.nextCursor?.timestamp &&
           messagesData.data.nextCursor?.id
@@ -209,7 +194,6 @@ export default function ChatPage({ params }: ChatPageProps) {
           setCursorId("");
           setHasMoreMessages(false);
         }
-
         if (response.chat.type === "group") {
           setUser(null);
           setGroupInfo({
@@ -236,13 +220,11 @@ export default function ChatPage({ params }: ChatPageProps) {
     isLoadingOlderMessagesRef.current = true;
     const container = scrollContainerRef.current;
     const prevScrollHeight = container.scrollHeight;
-
     const newMessagesData = await getChatMesssages(
       chat._id,
       cursorTimestamp,
       cursorId,
     );
-
     if (
       newMessagesData.data.nextCursor?.timestamp &&
       newMessagesData.data.nextCursor?.id
@@ -252,7 +234,6 @@ export default function ChatPage({ params }: ChatPageProps) {
     } else {
       setHasMoreMessages(false);
     }
-
     const olderMessages = [...newMessagesData.data.messages].reverse();
     setMessages((prevMessages) => {
       const existingIds = new Set(prevMessages.map((m) => m._id));
@@ -261,7 +242,6 @@ export default function ChatPage({ params }: ChatPageProps) {
       );
       return [...uniqueOlder, ...prevMessages];
     });
-
     requestAnimationFrame(() => {
       const newScrollHeight = container.scrollHeight;
       container.scrollTop += newScrollHeight - prevScrollHeight;
@@ -394,20 +374,15 @@ export default function ChatPage({ params }: ChatPageProps) {
       lastMessageIdRef.current = lastMessage?._id || null;
     }
     if (isLoadingOlderMessagesRef.current) return;
-    const scrollToBottom = () => {
+    requestAnimationFrame(() => {
       if (scrollRef.current) {
         scrollRef.current.scrollIntoView({ behavior: "instant", block: "end" });
       }
-    };
-    requestAnimationFrame(() => {
-      scrollToBottom();
     });
   }, [messages, typingUser]);
 
   const sendMessage = () => {
     if (!message.trim()) return;
-
-    // Extract mentions from message text for group chats
     let mentions: string[] | undefined = undefined;
     if (chat?.type === "group" && Array.isArray(chat.participants)) {
       const mentionedUsernames = Array.from(
@@ -417,7 +392,6 @@ export default function ChatPage({ params }: ChatPageProps) {
           ),
         ),
       );
-
       if (mentionedUsernames.length > 0) {
         const usernameToId = new Map<string, string>();
         chat.participants.forEach((p: any) => {
@@ -425,24 +399,21 @@ export default function ChatPage({ params }: ChatPageProps) {
             usernameToId.set(p.username.toLowerCase(), p._id);
           }
         });
-
         mentions = mentionedUsernames
           .map((uname) => usernameToId.get(uname))
           .filter((id): id is string => Boolean(id));
       }
     }
-
     socket.emit("send_message", {
       chatId: id,
       text: message,
       senderId: currentUserId,
       timestamp: new Date().toISOString(),
-      replyToMessageId: replyingTo?._id || null, // NEW: Send reply ID
+      replyToMessageId: replyingTo?._id || null,
       mentions,
     });
-
     setMessage("");
-    setReplyingTo(null); // NEW: Clear reply state
+    setReplyingTo(null);
   };
 
   const formatTime = (time: string) =>
@@ -452,8 +423,7 @@ export default function ChatPage({ params }: ChatPageProps) {
     });
 
   const copyToClipboard = (text: string) => {
-    const textToCopy = text;
-    navigator.clipboard.writeText(textToCopy);
+    navigator.clipboard.writeText(text);
   };
 
   const getReadStatus = (msg: Message) => {
@@ -476,11 +446,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   const messagePin = async (messageId: string, action: string) => {
     try {
       await pinChat(id, messageId, action);
-      socket.emit("update_pin", {
-        chatId: id,
-        messageId: messageId,
-        action: action,
-      });
+      socket.emit("update_pin", { chatId: id, messageId, action });
     } catch (error) {
       console.error("Failed to pin/unpin message:", error);
     }
@@ -530,20 +496,17 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   const handleDeleteMessage = async (messageId: string) => {
     await deleteMessage(messageId);
-    socket.emit("message_delete", { messageId: messageId, chatId: id });
+    socket.emit("message_delete", { messageId, chatId: id });
   };
 
-  // NEW: Handle reply to message
   const handleReplyToMessage = (msg: Message) => {
     setReplyingTo(msg);
   };
 
-  // NEW: Scroll to referenced message
   const scrollToMessage = (messageId: string) => {
     const element = messageRefs.current[messageId];
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Highlight animation
       element.classList.add("highlight-message");
       setTimeout(() => {
         element.classList.remove("highlight-message");
@@ -551,7 +514,6 @@ export default function ChatPage({ params }: ChatPageProps) {
     }
   };
 
-  // NEW: Render reply preview component
   const ReplyPreview = ({ reply }: { reply: ReplyToSnapshot }) => {
     const getReplyContent = () => {
       if (reply.type === "image") return "📷 Photo";
@@ -559,7 +521,6 @@ export default function ChatPage({ params }: ChatPageProps) {
       if (reply.type === "file") return `📎 ${reply.fileName}`;
       return reply.text;
     };
-
     return (
       <div
         className="border-l-4 border-blue-500 pl-3 py-2 mb-2 bg-blue-50/50 rounded cursor-pointer hover:bg-blue-100/50 transition-colors"
@@ -588,50 +549,49 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">
-      {/* ---------- HEADER ---------- */}
-      <header className="flex items-center justify-between px-4 sm:px-6 lg:px-10 p-4 border-b bg-white/95 backdrop-blur-md z-20 shadow-sm">
-        <div className="flex items-center gap-3">
-          {/* Mobile sidebar trigger */}
-          <div className="md:hidden mr-1">
-            <SidebarTrigger className="h-9 w-9" />
+      {/* HEADER */}
+      <header className="flex items-center justify-between px-4 py-3 border-b bg-white z-20">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="md:hidden">
+            <SidebarTrigger className="h-8 w-8" />
           </div>
-          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+          <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
             {(chat?.type === "group" ? groupInfo?.name : user?.username)
               ?.charAt(0)
               .toUpperCase()}
           </div>
-          <div>
-            <h1 className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tight">
+          <div className="min-w-0">
+            <h1 className="font-semibold text-gray-800 truncate">
               {chat?.type === "group" ? groupInfo?.name : user?.username}
             </h1>
             <div
-              className={`text-[10px] font-semibold flex items-center gap-1 uppercase tracking-widest ${user?.isOnline ? "text-green-600" : "text-red-500"}`}
+              className={`text-xs flex items-center gap-1 ${user?.isOnline ? "text-green-600" : "text-gray-400"}`}
             >
               {user?.isOnline ? (
                 <>
-                  <FiWifi size={12} /> Online
+                  <FiWifi size={10} /> Online
                 </>
               ) : (
                 <>
-                  <FiWifiOff size={12} /> Disconnected
+                  <FiWifiOff size={10} /> Offline
                 </>
               )}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <FiPhoneCall
-            size={20}
-            className="cursor-pointer text-blue-500 hover:text-blue-600 transition-colors"
+        <div className="flex items-center gap-2">
+          <button
+            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition-colors"
             onClick={() => alert("Coming soon...")}
-          />
+          >
+            <FiPhoneCall size={18} />
+          </button>
           {chat && (
             <DropdownMenu>
-              <DropdownMenuTrigger className="px-4 py-1.5 text-xs font-bold border rounded-full hover:bg-gray-50 transition-all uppercase tracking-tighter">
-                <FiMoreVertical
-                  size={20}
-                  className="cursor-pointer text-gray-500 hover:text-blue-600 transition-colors"
-                />
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition-colors">
+                  <FiMoreVertical size={18} />
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
@@ -643,12 +603,10 @@ export default function ChatPage({ params }: ChatPageProps) {
                   className="gap-2"
                 >
                   <FiSearch size={16} />
-                  Search in chat
+                  Search messages
                 </DropdownMenuItem>
                 {chat?.type === "group" && (
                   <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Group Management</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {chat.groupAdmins.includes(currentUserId) && (
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -666,9 +624,9 @@ export default function ChatPage({ params }: ChatPageProps) {
         </div>
       </header>
 
-      {/* ---------- SEARCH BAR ---------- */}
+      {/* SEARCH BAR */}
       {isSearchOpen && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b bg-slate-50">
+        <div className="flex items-center gap-2 px-4 py-2 border-b bg-gray-50">
           <FiSearch className="h-4 w-4 text-gray-400 shrink-0" />
           <input
             ref={searchInputRef}
@@ -676,7 +634,7 @@ export default function ChatPage({ params }: ChatPageProps) {
             placeholder="Search messages..."
             value={messageSearchQuery}
             onChange={(e) => setMessageSearchQuery(e.target.value)}
-            className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 min-w-0 px-3 py-1.5 text-sm bg-white border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <button
             type="button"
@@ -684,113 +642,65 @@ export default function ChatPage({ params }: ChatPageProps) {
               setIsSearchOpen(false);
               setMessageSearchQuery("");
             }}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
-            aria-label="Close search"
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 transition-colors"
           >
-            <FiX size={18} />
+            <FiX size={16} />
           </button>
         </div>
       )}
 
-      {/* ---------- PINNED MESSAGES ---------- */}
+      {/* PINNED MESSAGES */}
       {chat?.pinnedMessages && chat.pinnedMessages.length > 0 && (
-        <div className="bg-yellow-50 border-l-4 p-4 mb-4">
-          <div className="space-y-2">
-            {chat.pinnedMessages.map((pinnedMsg: Message) => (
-              <ContextMenu key={pinnedMsg._id}>
-                <ContextMenuTrigger className="w-full">
-                  <div className="relative group h-[60px] overflow-hidden">
-                    <div className="absolute inset-0 backdrop-blur-md rounded-lg transition-all duration-300 group-hover:from-white/80 group-hover:to-white/60 group-hover:backdrop-blur-sm" />
-                    <div className="relative h-full p-2 rounded-lg border border-white/40 cursor-pointer transition-all duration-300 group-hover:border-gray-300">
-                      <div className="flex items-start h-full gap-2">
-                        <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                          {pinnedMsg.type === "image" ? (
-                            <FiImage size={14} />
-                          ) : pinnedMsg.type === "video" ? (
-                            <FiVideo size={14} />
-                          ) : pinnedMsg.type === "file" ? (
-                            <FiFile size={14} />
-                          ) : (
-                            <span>💬</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-xs font-semibold text-gray-800 truncate">
-                              {pinnedMsg?.senderId?.username}
-                            </span>
-                            <span className="text-[10px] text-gray-600 shrink-0 ml-1">
-                              {new Date(pinnedMsg.createdAt).toLocaleDateString(
-                                [],
-                                { month: "short", day: "numeric" },
-                              )}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-900 truncate line-clamp-2 leading-tight">
-                            {pinnedMsg.type === "text"
-                              ? pinnedMsg.text
-                              : pinnedMsg.type === "image"
-                                ? "📷 Image"
-                                : pinnedMsg.type === "video"
-                                  ? "🎬 Video"
-                                  : pinnedMsg.type === "file"
-                                    ? `📎 ${pinnedMsg.fileName}`
-                                    : "Attachment"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent className="w-48 font-semibold backdrop-blur-lg bg-white/90 border-white/30 shadow-xl">
-                  <ContextMenuItem
-                    onClick={() => copyToClipboard(pinnedMsg.text)}
-                    className="gap-2"
-                  >
-                    <FiCopy size={14} /> Copy Text
-                  </ContextMenuItem>
-                  <ContextMenuItem
-                    onClick={() => messagePin(pinnedMsg._id, "unpin")}
-                    className="gap-2 text-orange-600"
-                  >
-                    <FiMapPin size={14} /> Unpin Message
-                  </ContextMenuItem>
-                  {pinnedMsg.fileUrl && (
-                    <ContextMenuItem
-                      onClick={() =>
-                        window.open(`${API_URL}${pinnedMsg.fileUrl}`)
-                      }
-                      className="gap-2"
-                    >
-                      <FiMaximize2 size={14} /> View Original
-                    </ContextMenuItem>
-                  )}
-                </ContextMenuContent>
-              </ContextMenu>
+        <div className="bg-yellow-50 border-b px-4 py-2">
+          <div className="flex items-center gap-2 text-xs text-yellow-700 mb-1">
+            <FiMapPin size={12} />
+            <span className="font-medium">Pinned messages</span>
+          </div>
+          <div className="space-y-1">
+            {chat.pinnedMessages.slice(0, 2).map((pinnedMsg: Message) => (
+              <div key={pinnedMsg._id} className="text-sm truncate">
+                <span className="font-medium text-gray-700">
+                  {pinnedMsg?.senderId?.username}:
+                </span>{" "}
+                <span className="text-gray-600">
+                  {pinnedMsg.type === "text"
+                    ? pinnedMsg.text
+                    : pinnedMsg.type === "image"
+                      ? "📷 Image"
+                      : pinnedMsg.type === "video"
+                        ? "🎬 Video"
+                        : `📎 ${pinnedMsg.fileName}`}
+                </span>
+              </div>
             ))}
+            {chat.pinnedMessages.length > 2 && (
+              <div className="text-xs text-gray-500">
+                +{chat.pinnedMessages.length - 2} more
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden bg-slate-50">
+      {/* MESSAGES */}
+      <main className="flex-1 overflow-hidden bg-gray-50">
         <div ref={scrollContainerRef} className="h-full overflow-y-auto px-4">
           <div className="flex justify-center py-4">
             {hasMoreMessages && (
               <button
                 onClick={handleGetMessages}
-                className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-blue-500 transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Load Older Messages
+                Load older messages
               </button>
             )}
           </div>
 
-          <div className="pb-10 space-y-6">
+          <div className="pb-4 space-y-4">
             {Object.entries(groupedMessages).map(([dayKey, dayMessages]) => (
-              <div key={dayKey} className="space-y-6">
-                {/* DATE SEPARATOR */}
-                <div className="flex justify-center my-8">
-                  <span className="px-4 py-1 text-[10px] font-black uppercase tracking-widest ">
+              <div key={dayKey} className="space-y-4">
+                <div className="flex justify-center">
+                  <span className="px-3 py-1 text-xs bg-gray-200 rounded-full text-gray-600">
                     {formatDayLabel(dayKey)}
                   </span>
                 </div>
@@ -806,50 +716,46 @@ export default function ChatPage({ params }: ChatPageProps) {
                       className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                     >
                       <ContextMenu>
-                        <ContextMenuTrigger className="max-w-[88%] sm:max-w-[70%] transition-all">
+                        <ContextMenuTrigger className="max-w-[85%] sm:max-w-[70%]">
                           <div
-                            className={`relative group rounded-2xl px-4 py-3 shadow-sm transition-all duration-200
-    ${
-      isMine
-        ? "bg-blue-600 text-white rounded-tr-none shadow-blue-200/40 hover:shadow-md"
-        : "bg-white border border-gray-200 rounded-tl-none text-gray-800 hover:shadow-md"
-    }
-    ${mentionsMe ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-50" : ""}`}
+                            className={`relative rounded-lg px-3 py-2 shadow-sm
+                              ${
+                                isMine
+                                  ? "bg-blue-500 text-white"
+                                  : "bg-white text-gray-800"
+                              }
+                              ${mentionsMe ? "ring-2 ring-blue-400" : ""}`}
                           >
-                            {/* Sender Name */}
                             {!isMine && (
-                              <div className="text-[10px] font-extrabold flex items-center gap-1 mb-1 text-blue-500 uppercase tracking-wide">
+                              <div className="text-xs font-medium flex items-center gap-1 mb-0.5 text-gray-600">
                                 <FiUser size={10} />
                                 {msg?.senderId?.username}
                               </div>
                             )}
 
-                            {/* NEW: Reply Preview */}
                             {msg.replyToSnapshot && (
                               <ReplyPreview reply={msg.replyToSnapshot} />
                             )}
 
-                            {/* Deleted Message */}
                             {msg.isDeleted ? (
-                              <p className="text-[13px] italic text-gray-400 select-none">
+                              <p className="text-sm italic text-gray-400">
                                 Message deleted
                               </p>
                             ) : (
                               <>
-                                {/* Forwarded Label */}
                                 {msg.forwardedMessage && (
-                                  <span className="text-[10px] italic opacity-70 block mb-1">
-                                    • Forwarded
+                                  <span className="text-xs italic opacity-70 block mb-0.5">
+                                    Forwarded
                                   </span>
                                 )}
 
-                                {/* IMAGE */}
+                                {/* IMAGE - fixed size */}
                                 {msg.type === "image" && (
-                                  <div className="mb-2 overflow-hidden rounded-lg">
+                                  <div className="mb-1 max-w-[200px]">
                                     <img
                                       src={`${API_URL}${msg.fileUrl}`}
                                       alt={msg.fileName}
-                                      className="max-w-full max-h-80 object-cover cursor-pointer transition-transform duration-200 hover:scale-[1.02]"
+                                      className="w-full h-auto max-h-[200px] object-contain rounded cursor-pointer"
                                       onClick={() =>
                                         window.open(`${API_URL}${msg.fileUrl}`)
                                       }
@@ -859,75 +765,45 @@ export default function ChatPage({ params }: ChatPageProps) {
 
                                 {/* VIDEO */}
                                 {msg.type === "video" && (
-                                  <div className="mb-2 overflow-hidden rounded-lg shadow-inner">
+                                  <div className="mb-1 max-w-[200px]">
                                     <video
                                       src={`${API_URL}${msg.fileUrl}`}
-                                      className="max-w-full max-h-80 rounded-lg"
+                                      className="w-full rounded"
                                       controls
                                     />
                                   </div>
                                 )}
 
-                                {/* FILE / DOCUMENT */}
+                                {/* FILE */}
                                 {msg.type === "file" && (
-                                  (() => {
-                                    const name = msg.fileName || "";
-                                    const ext =
-                                      name.split(".").pop()?.toLowerCase() || "";
-                                    let label = "File";
-                                    if (["pdf"].includes(ext)) label = "PDF Document";
-                                    else if (["ppt", "pptx"].includes(ext))
-                                      label = "PowerPoint";
-                                    else if (["doc", "docx"].includes(ext))
-                                      label = "Word Document";
-                                    else if (["xls", "xlsx"].includes(ext))
-                                      label = "Excel Spreadsheet";
-
-                                    return (
-                                      <a
-                                        href={`${API_URL}${msg.fileUrl}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={`flex items-center gap-3 p-3 rounded-xl border mb-2 transition-all no-underline
-            ${
-              isMine
-                ? "bg-blue-700/30 border-blue-400/30 text-white hover:bg-blue-700/40"
-                : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"
-            }`}
-                                      >
-                                        <div
-                                          className={`p-2 rounded-lg shrink-0
-              ${isMine ? "bg-blue-500" : "bg-gray-200 text-gray-600"}`}
-                                        >
-                                          <FiFileText size={20} />
-                                        </div>
-
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold truncate">
-                                            {name || "Document"}
-                                          </p>
-                                          <p className="text-[10px] uppercase font-bold opacity-60 tracking-wide">
-                                            {label} • Click to open
-                                          </p>
-                                        </div>
-
-                                        <FiDownload className="opacity-50 shrink-0" />
-                                      </a>
-                                    );
-                                  })()
+                                  <a
+                                    href={`${API_URL}${msg.fileUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-2 p-2 rounded border mb-1 no-underline
+                                      ${
+                                        isMine
+                                          ? "bg-blue-600 border-blue-400 text-white hover:bg-blue-700"
+                                          : "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100"
+                                      }`}
+                                  >
+                                    <FiFileText size={16} />
+                                    <span className="text-sm truncate">
+                                      {msg.fileName || "Document"}
+                                    </span>
+                                  </a>
                                 )}
 
-                                {/* TEXT MESSAGE */}
+                                {/* TEXT */}
                                 {msg.text && (
-                                  <p className="text-[14px] leading-relaxed wrap-break-word whitespace-pre-wrap font-medium">
+                                  <p className="text-sm break-words whitespace-pre-wrap">
                                     {msg.text}
                                   </p>
                                 )}
                               </>
                             )}
 
-                            {/* TIMESTAMP */}
-                            <div className="text-[9px] mt-2 flex justify-end items-center gap-1.5 font-semibold uppercase tracking-wide opacity-60">
+                            <div className="text-[10px] mt-1 flex justify-end items-center gap-1 opacity-60">
                               <span>{formatTime(msg.createdAt)}</span>
                               {isMine && <span>• {getReadStatus(msg)}</span>}
                             </div>
@@ -935,7 +811,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                         </ContextMenuTrigger>
 
                         {!msg.isDeleted && (
-                          <ContextMenuContent className="w-48 font-semibold">
+                          <ContextMenuContent className="w-48">
                             <ContextMenuItem
                               onClick={() => handleReplyToMessage(msg)}
                               className="gap-2"
@@ -946,7 +822,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                               onClick={() => copyToClipboard(msg?.text)}
                               className="gap-2"
                             >
-                              <FiCopy size={14} /> Copy Text
+                              <FiCopy size={14} /> Copy
                             </ContextMenuItem>
                             <ContextMenuItem
                               onSelect={(e) => e.preventDefault()}
@@ -954,7 +830,6 @@ export default function ChatPage({ params }: ChatPageProps) {
                               <FiPhoneForwarded size={14} />
                               <ForwardeMessageModal messageToForward={msg} />
                             </ContextMenuItem>
-
                             {msg.fileUrl && (
                               <ContextMenuItem
                                 onClick={() =>
@@ -962,7 +837,7 @@ export default function ChatPage({ params }: ChatPageProps) {
                                 }
                                 className="gap-2"
                               >
-                                <FiMaximize2 size={14} /> View Original
+                                <FiMaximize2 size={14} /> Open
                               </ContextMenuItem>
                             )}
                             <ContextMenuItem
@@ -978,16 +853,16 @@ export default function ChatPage({ params }: ChatPageProps) {
                               {chat?.pinnedMessages?.some(
                                 (pinned: Message) => pinned._id === msg._id,
                               )
-                                ? "Unpin Message"
-                                : "Pin Message"}
+                                ? "Unpin"
+                                : "Pin"}
                             </ContextMenuItem>
                             <ContextMenuSeparator />
                             {isMine && isLessThan10Minutes(msg.createdAt) && (
                               <ContextMenuItem
                                 onClick={() => handleDeleteMessage(msg._id)}
-                                className="gap-2 text-red-500 focus:text-red-500 cursor-pointer"
+                                className="gap-2 text-red-500 focus:text-red-500"
                               >
-                                <FiTrash2 size={14} /> Delete Message
+                                <FiTrash2 size={14} /> Delete
                               </ContextMenuItem>
                             )}
                           </ContextMenuContent>
@@ -1000,27 +875,27 @@ export default function ChatPage({ params }: ChatPageProps) {
             ))}
 
             {typingUser && (
-              <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest animate-pulse">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
                 <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
                 {typingUser} is typing
               </div>
             )}
-            <div ref={scrollRef} className="h-4" />
+            <div ref={scrollRef} />
           </div>
         </div>
       </main>
 
-      {/* ---------- FOOTER ---------- */}
-      <footer className="p-4 border-t bg-white z-20">
-        {/* NEW: Reply Banner */}
+      {/* FOOTER - Fixed for mobile */}
+      <footer className="border-t bg-white">
+        {/* Reply Banner */}
         {replyingTo && (
-          <div className="max-w-5xl mx-auto mb-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-3 flex items-start justify-between">
+          <div className="px-4 py-2 bg-blue-50 border-l-4 border-blue-500 flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-blue-600 mb-1">
+              <div className="text-xs font-medium text-blue-600 mb-0.5">
                 Replying to {replyingTo?.senderId?.username}
               </div>
               <div className="text-sm text-gray-600 truncate">
@@ -1035,14 +910,14 @@ export default function ChatPage({ params }: ChatPageProps) {
             </div>
             <button
               onClick={() => setReplyingTo(null)}
-              className="ml-2 p-1 hover:bg-blue-100 rounded-full transition-colors"
+              className="ml-2 p-1 hover:bg-blue-100 rounded-full shrink-0"
             >
               <FiX size={16} className="text-gray-500" />
             </button>
           </div>
         )}
 
-        <div className="max-w-5xl mx-auto flex items-center gap-3">
+        <div className="flex items-end gap-2 p-2">
           <SettingDropdown />
           <div className="relative flex-1">
             <textarea
@@ -1058,59 +933,52 @@ export default function ChatPage({ params }: ChatPageProps) {
                 }
               }}
               rows={1}
-              className="w-full rounded-2xl px-5 py-3 bg-gray-100 border-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-gray-400 resize-none overflow-hidden min-h-[48px] max-h-[120px]"
-              placeholder="Write a message..."
+              className="w-full rounded-lg px-3 py-2 bg-gray-100 border-0 focus:ring-1 focus:ring-blue-500 text-sm resize-none max-h-24"
+              placeholder="Message..."
               style={{
-                height: "auto",
+                minHeight: "40px",
+                maxHeight: "96px",
               }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
-                target.style.height = "auto";
-                target.style.height = Math.min(target.scrollHeight, 120) + "px";
+                target.style.height = "40px";
+                target.style.height = Math.min(target.scrollHeight, 96) + "px";
               }}
             />
 
             {/* Mention Dropdown */}
             {isMentionOpen && filteredParticipants.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-                <div className="p-2">
-                  <p className="text-xs font-semibold text-gray-500 px-2 py-1">
-                    Mention User
-                  </p>
-                  {filteredParticipants.map((part: any) => (
-                    <button
-                      key={part._id}
-                      onClick={() => {
-                        const lastAtIndex = message.lastIndexOf("@");
-                        const beforeAt = message.slice(0, lastAtIndex);
-                        setMessage(beforeAt + `@${part.username} `);
-                        setIsMentionOpen(false);
-                      }}
-                      className="w-full text-left p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs shrink-0">
-                        {part.username?.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium text-sm truncate">
-                        {part.username}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+              <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+                {filteredParticipants.map((part: any) => (
+                  <button
+                    key={part._id}
+                    onClick={() => {
+                      const lastAtIndex = message.lastIndexOf("@");
+                      const beforeAt = message.slice(0, lastAtIndex);
+                      setMessage(beforeAt + `@${part.username} `);
+                      setIsMentionOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs shrink-0">
+                      {part.username?.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="truncate">{part.username}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
           <button
             onClick={sendMessage}
             disabled={!message.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white p-3.5 rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-90 mb-0"
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-200 text-white p-2.5 rounded-lg transition-colors shrink-0"
           >
             <FiSend size={18} />
           </button>
         </div>
       </footer>
 
-      {/* NEW: Add CSS for highlight animation */}
       <style jsx global>{`
         @keyframes highlight {
           0%,
@@ -1121,7 +989,6 @@ export default function ChatPage({ params }: ChatPageProps) {
             background-color: rgba(59, 130, 246, 0.2);
           }
         }
-
         .highlight-message {
           animation: highlight 2s ease-in-out;
         }
