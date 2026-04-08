@@ -1,4 +1,7 @@
+require("../instrument");
+
 const express = require("express");
+const Sentry = require("@sentry/node");
 const allRoutes = require("./routes/api");
 const authRoutes = require("./routes/auth.route");
 const cors = require("cors");
@@ -47,7 +50,14 @@ app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
 app.use(morgan("dev"));
+app.get("/debug-sentry", function mainHandler(req, res) {
+  throw new Error("My first Sentry error!");
+});
+app.get("/", function rootHandler(req, res) {
+  res.end("Hello world!");
+});
 app.use("/api", allRoutes);
 app.use("/api/auth", authRoutes);
+Sentry.setupExpressErrorHandler(app);
 
 module.exports = app;

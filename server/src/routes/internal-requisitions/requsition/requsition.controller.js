@@ -1,5 +1,6 @@
 const InternalRequisition = require("../../../models/internal-requsitions-schema");
 const requisitionService = require("../../../services/internalRequisition.service");
+const Sentry = require("@sentry/node");
 
 async function getAllDataFigures(req, res) {
   try {
@@ -44,6 +45,14 @@ async function createRequest(req, res) {
     res.status(201).json(request);
   } catch (error) {
     console.error(error);
+    Sentry.captureException(error, {
+      tags: { section: "create-internal-request" },
+      extra: {
+        userId: req.user?.id,
+        department: req.user?.department,
+        body: req.body,
+      },
+    });
     res.status(500).json({ message: "Error submitting request" });
   }
 }

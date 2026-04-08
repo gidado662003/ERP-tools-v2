@@ -3,6 +3,7 @@ const InternalRequisition = require("../models/internal-requsitions-schema");
 const Category = require("../models/internal-documents-category.schema");
 const Document = require("../models/internal-documents.schema");
 const sendEmail = require("../helper/mailTemplate");
+const Sentry = require("@sentry/node");
 const { createProductsFromRequest } = require("./inventory.service");
 
 async function getAllDataFigures(user) {
@@ -244,6 +245,16 @@ async function createRequest(payload) {
       );
     } catch (attachmentError) {
       console.error("Error auto-attaching documents:", attachmentError);
+      Sentry.captureException(attachmentError, {
+        tags: { section: "document-attachment" },
+        extra: {
+          requisitionNumber,
+          category: body.category,
+          fileCount: files.length,
+          userId: laravelUser.id,
+          department: user.department,
+        },
+      });
     }
   }
 
@@ -271,6 +282,16 @@ async function createRequest(payload) {
     }
   } catch (emailError) {
     console.error("Error sending email:", emailError);
+    Sentry.captureException(emailError, {
+      tags: { section: "email-notification" },
+      extra: {
+        requisitionNumber,
+        recipientEmail: process.env.NOTIFICATION_EMAIL,
+        ccEmail: user.email,
+        userId: laravelUser.id,
+        department: user.department,
+      },
+    });
   }
 
   return request;
@@ -445,4 +466,3 @@ module.exports = {
   createRequest,
   updateRequest,
 };
-
