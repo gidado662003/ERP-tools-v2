@@ -3,13 +3,12 @@ import React, { Suspense, useEffect, useState } from "react";
 import { FileText, Clock, Check, X, Package } from "lucide-react";
 import RequestListCards from "@/components/internal-requsitions/card";
 import DateRangePicker from "@/components/internal-requsitions/datepicker";
-import { internlRequestAPI } from "@/lib/internalRequestApi";
+import { internalRequestAPI } from "@/lib/internalRequestApi";
 import { CountList, InternalRequisition } from "@/lib/internalRequestTypes";
 import RequestTable from "@/components/internal-requsitions/requestTable";
 import InputSearch from "@/components/internal-requsitions/inputSearch";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-
 
 function RequisitionListContent() {
   const searchParams = useSearchParams();
@@ -41,7 +40,7 @@ function RequisitionListContent() {
   useEffect(() => {
     const handleListCount = async () => {
       setLoading(true);
-      const res = await internlRequestAPI.countList();
+      const res = await internalRequestAPI.countList();
       setListCount(res?.data);
     };
     handleListCount();
@@ -56,7 +55,7 @@ function RequisitionListContent() {
     cursorId?: string | null,
     cursorTimeStamp?: string,
   ) => {
-    const responce = await internlRequestAPI.allData({
+    const responce = await internalRequestAPI.allData({
       search: searchInput,
       status: statusData,
       cursorTimestamp: cursorTimeStamp || "",

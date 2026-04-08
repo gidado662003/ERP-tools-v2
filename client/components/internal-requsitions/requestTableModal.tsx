@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { internlRequestAPI } from "@/lib/internalRequestApi";
+import { internalRequestAPI } from "@/lib/internalRequestApi";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -32,7 +32,7 @@ function RequestTableModal({ itemId }: { itemId: string }) {
   useEffect(() => {
     const handleGetItemById = async () => {
       try {
-        const response = await internlRequestAPI.dataById(itemId);
+        const response = await internalRequestAPI.dataById(itemId);
         setData(response);
       } catch (error) {
         console.error("Error fetching requisition:", error);

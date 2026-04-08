@@ -33,7 +33,7 @@ requestApi.interceptors.response.use(
   },
 );
 
-export const internlRequestAPI = {
+export const internalRequestAPI = {
   countList: async () => {
     try {
       const res = requestApi.get("/internalrequest/list");
@@ -129,9 +129,19 @@ export const internlRequestAPI = {
       throw error;
     }
   },
-  getDashboardData: async () => {
+  getDashboardData: async ({
+    dateRange,
+  }: {
+    dateRange: { startDate: string; endDate: string };
+  }) => {
+    console.log("🚀 ~ dateRange:", dateRange);
     try {
-      const res = await requestApi.get("/internalrequest/dashboard/metrics");
+      const res = await requestApi.get("/internalrequest/dashboard/metrics", {
+        params: {
+          startDate: dateRange.startDate ?? "",
+          endDate: dateRange.endDate ?? "",
+        },
+      });
       return res.data;
     } catch (error) {
       console.error("Get dashboard data failed", error);

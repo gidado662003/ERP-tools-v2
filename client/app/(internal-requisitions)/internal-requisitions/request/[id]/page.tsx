@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { InternalRequisition } from "@/lib/internalRequestTypes";
-import { internlRequestAPI } from "@/lib/internalRequestApi";
+import { internalRequestAPI } from "@/lib/internalRequestApi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +76,7 @@ export default function RequestDetailsPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await internlRequestAPI.dataById(id);
+      const res = await internalRequestAPI.dataById(id);
       setRequest(res);
     } catch (err) {
       console.error(err);
@@ -156,7 +156,7 @@ export default function RequestDetailsPage() {
 
     try {
       setIsSubmitting(true);
-      await internlRequestAPI.updateRequest(id, {
+      await internalRequestAPI.updateRequest(id, {
         status,
         financeComment: comment,
         sourceBank: selectedBank,

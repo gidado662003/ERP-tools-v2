@@ -73,6 +73,8 @@ exports.getHourlyPatterns = async (req, res) => {
 // Get dashboard metrics
 exports.getDashboardMetrics = async (req, res) => {
   try {
+    const queries = req.query;
+    console.log("🚀 ~ getDashboardMetrics ~ queries:", queries);
     const metrics = await dashboardService.getDashboardMetrics(req.query);
     res.json(metrics);
   } catch (error) {

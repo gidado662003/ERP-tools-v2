@@ -12,7 +12,7 @@ import RequestForm from "@/components/internal-requsitions/request-form";
 import RequisitionItems from "@/components/internal-requsitions/request-items";
 import { CreateRequisitionPayload } from "@/lib/internalRequestTypes";
 import RequestPreview from "@/components/internal-requsitions/request-preview";
-import { internlRequestAPI } from "@/lib/internalRequestApi";
+import { internalRequestAPI } from "@/lib/internalRequestApi";
 import { toast } from "sonner";
 function page() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -42,7 +42,7 @@ function page() {
     setLoading(true);
 
     try {
-      const response = await internlRequestAPI.createRequest(formData);
+      const response = await internalRequestAPI.createRequest(formData);
 
       toast.success("Request created successfully");
       setCurrentStep(1);
