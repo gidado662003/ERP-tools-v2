@@ -10,42 +10,97 @@ import InputSearch from "@/components/internal-requsitions/inputSearch";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
+const CARDS = [
+  {
+    key: "",
+    label: "Total",
+    countKey: "countTotal",
+    variant: "accent" as const,
+    icon: <FileText size={16} />,
+  },
+  {
+    key: "pending",
+    label: "Pending",
+    countKey: "pendingTotal",
+    variant: "warning" as const,
+    icon: <Clock size={16} />,
+  },
+  {
+    key: "approved",
+    label: "Approved",
+    countKey: "approvedTotal",
+    variant: "success" as const,
+    icon: <Check size={16} />,
+  },
+  {
+    key: "rejected",
+    label: "Rejected",
+    countKey: "rejectedTotal",
+    variant: "danger" as const,
+    icon: <X size={16} />,
+  },
+  {
+    key: "outstanding",
+    label: "Outstanding",
+    countKey: "outstandingTotal",
+    variant: "default" as const,
+    icon: <Package size={16} />,
+  },
+];
+
+function CardsSkeleton() {
+  return (
+    <div className="grid grid-cols-5 gap-3 p-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className="h-[100px] rounded-lg border border-[#e0dfe8] bg-white p-4 space-y-3"
+        >
+          <div className="h-2 w-16 rounded bg-[#f0eef5] animate-pulse" />
+          <div className="h-6 w-10 rounded bg-[#f0eef5] animate-pulse" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RequisitionListContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialSearch = searchParams.get("search") || "";
-  const initialStatus = searchParams.get("status") || "";
   const [listCount, setListCount] = useState<CountList>();
   const [data, setData] = useState<InternalRequisition[]>();
-  const [statusData, setStatusData] = useState<string>(initialStatus);
-  const [searchInput, setSearchInput] = useState<string>(initialSearch);
+  const [statusData, setStatusData] = useState<string>(
+    searchParams.get("status") || "",
+  );
+  const [searchInput, setSearchInput] = useState<string>(
+    searchParams.get("search") || "",
+  );
   const [hasMore, setHasMore] = useState<boolean>();
   const [cursorTimeStamp, setCursorTimeStamp] = useState<string | undefined>();
   const [cursorId, setCursorId] = useState<string | undefined>();
-  const [cursorStack, setCursorStack] = useState<any[]>([]);
+  const [cursorStack, setCursorStack] = useState<
+    { cursorId: string; cursorTimeStamp?: string }[]
+  >([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
-  // helper for url
   const updateURL = (params: { search?: string; status?: string }) => {
     const query = new URLSearchParams();
-
     if (params.search) query.set("search", params.search);
     if (params.status) query.set("status", params.status);
-
     router.push(`?${query.toString()}`, { scroll: false });
   };
 
   useEffect(() => {
     const handleListCount = async () => {
-      setLoading(true);
       const res = await internalRequestAPI.countList();
       setListCount(res?.data);
+      setLoading(false);
     };
     handleListCount();
-    setLoading(false);
   }, []);
+
   useEffect(() => {
     updateURL({ search: searchInput, status: statusData });
     fetchRequests(null);
@@ -55,7 +110,7 @@ function RequisitionListContent() {
     cursorId?: string | null,
     cursorTimeStamp?: string,
   ) => {
-    const responce = await internalRequestAPI.allData({
+    const response = await internalRequestAPI.allData({
       search: searchInput,
       status: statusData,
       cursorTimestamp: cursorTimeStamp || "",
@@ -63,113 +118,72 @@ function RequisitionListContent() {
       startDate: startDate || "",
       endDate: endDate || "",
     });
-
-    setData(responce?.data);
-
-    setListCount(responce?.counts);
-
-    setHasMore(responce?.hasMore);
-    setCursorId(responce?.nextCursor?.id ?? "");
-    setCursorTimeStamp(responce?.nextCursor?.timestamp);
+    setData(response?.data);
+    setHasMore(response?.hasMore);
+    setCursorId(response?.nextCursor?.id ?? "");
+    setCursorTimeStamp(response?.nextCursor?.timestamp);
   };
+
   const handleNext = () => {
     if (!cursorId && !cursorTimeStamp) return;
-    setCursorStack((prev) => [...prev, { cursorId, cursorTimeStamp }]);
+    setCursorStack((prev) => [
+      ...prev,
+      { cursorId: cursorId!, cursorTimeStamp },
+    ]);
     fetchRequests(cursorId, cursorTimeStamp);
   };
-  const handleBack = async () => {
+
+  const handleBack = () => {
     setCursorStack((prev) => {
       if (prev.length === 0) return prev;
-
       const newStack = [...prev];
       newStack.pop();
       const previousCursor = newStack[newStack.length - 1];
       fetchRequests(previousCursor?.cursorId, previousCursor?.cursorTimeStamp);
-
       return newStack;
     });
   };
 
   return (
     <div>
-      <DateRangePicker
-        onDateChange={(startDate, endDate) => {
-          setStartDate(startDate);
-          setEndDate(endDate);
-        }}
-      />
-
-      <div className="grid grid-cols-5 gap-3 p-3">
-        <div
-          onClick={() => {
-            setStatusData("");
+      <div className="flex justify-center items-center">
+        <DateRangePicker
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
           }}
-        >
-          <RequestListCards
-            label="Total"
-            amount={listCount?.countTotal}
-            variant="accent"
-            icon={<FileText />}
-          />
-        </div>
-        <div
-          onClick={() => {
-            setStatusData("pending");
-          }}
-        >
-          <RequestListCards
-            label="Pending"
-            amount={listCount?.pendingTotal}
-            icon={<Clock />}
-            variant="warning"
-          />
-        </div>
-        <div
-          onClick={() => {
-            setStatusData("approved");
-          }}
-        >
-          <RequestListCards
-            label="Approved"
-            amount={listCount?.approvedTotal}
-            variant="success"
-            icon={<Check />}
-          />
-        </div>
-        <div
-          onClick={() => {
-            setStatusData("rejected");
-          }}
-        >
-          <RequestListCards
-            label="Rejected"
-            amount={listCount?.rejectedTotal}
-            variant="warning"
-            icon={<X />}
-          />
-        </div>
-        <div
-          onClick={() => {
-            setStatusData("outstanding");
-          }}
-        >
-          <RequestListCards
-            label="Outstanding"
-            amount={listCount?.outstandingTotal}
-            variant="default"
-            icon={<Package />}
-          />
-        </div>
+        />
       </div>
-      <main>
-        <div className="flex items-center gap-3">
+
+      {loading ? (
+        <CardsSkeleton />
+      ) : (
+        <div className="grid grid-cols-5 gap-3 p-3">
+          {CARDS.map(({ key, label, countKey, variant, icon }) => (
+            <RequestListCards
+              key={key}
+              label={label}
+              amount={listCount?.[countKey as keyof CountList] as number}
+              variant={variant}
+              icon={icon}
+              active={statusData === key}
+              onClick={() => setStatusData(key)}
+            />
+          ))}
+        </div>
+      )}
+
+      <main className="px-3 pb-3">
+        <div className="flex justify-end items-center gap-2 mb-3">
           <InputSearch onSearch={(value) => setSearchInput(value)} />
           <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               setSearchInput("");
               setStatusData("");
             }}
-            className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-mdext-gray-600  hover:bg-gray-100 hover:text-gray-800 transition-colors "
+            className="text-[#80708f] dark:text-white border-[#e0dfe8] hover:bg-[#f0eef5] hover:text-[#1d1d24]"
           >
             Clear
           </Button>
@@ -185,12 +199,10 @@ function RequisitionListContent() {
   );
 }
 
-function Page() {
+export default function Page() {
   return (
-    <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>
+    <Suspense fallback={<CardsSkeleton />}>
       <RequisitionListContent />
     </Suspense>
   );
 }
-
-export default Page;

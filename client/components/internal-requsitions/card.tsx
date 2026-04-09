@@ -1,124 +1,83 @@
-import React, { ReactNode } from 'react'
-import { Card } from '../ui/card'
-import { cn } from '@/lib/utils' // Optional: utility for conditional classes
+import React, { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface RequestListCardsProps {
-    label: string;
-    amount?: number;
-    icon?: ReactNode;
-    description?: string;
-    variant?: 'default' | 'accent' | 'warning' | 'success';
-    onClick?: () => void;
-    className?: string;
-    loading?: boolean;
+  label: string;
+  amount?: number;
+  icon?: ReactNode;
+  variant?: "default" | "accent" | "warning" | "success" | "danger";
+  onClick?: () => void;
+  className?: string;
+  loading?: boolean;
+  active?: boolean;
 }
 
 function RequestListCards({
-    label,
-    amount,
-    icon,
-    variant = 'default',
-    onClick,
-    className,
-    loading = false
+  label,
+  amount,
+  icon,
+  variant = "default",
+  onClick,
+  className,
+  loading = false,
+  active = false,
 }: RequestListCardsProps) {
+  const variantStyles = {
+    default: {
+      amount: "text-[#1d1d24] dark:text-gray-200",
+      dot: "bg-gray-400 dark:bg-gray-500",
+    },
+    accent: {
+      amount: "text-indigo-600 dark:text-indigo-400",
+      dot: "bg-indigo-400 dark:bg-indigo-500",
+    },
+    warning: {
+      amount: "text-amber-600 dark:text-amber-400",
+      dot: "bg-amber-400 dark:bg-amber-500",
+    },
+    success: {
+      amount: "text-emerald-600 dark:text-emerald-400",
+      dot: "bg-emerald-500 dark:bg-emerald-500",
+    },
+    danger: {
+      amount: "text-red-500 dark:text-red-400",
+      dot: "bg-red-500 dark:bg-red-500",
+    },
+  };
 
-    const variantStyles = {
-        default: {
-            card: "border-gray-200 hover:border-gray-300 bg-white",
-            label: "text-gray-600",
-            amount: "text-gray-900",
-            icon: "text-gray-500"
-        },
-        accent: {
-            card: "border-blue-200 hover:border-blue-300 bg-gradient-to-br from-blue-50 to-blue-25",
-            label: "text-blue-700",
-            amount: "text-blue-900",
-            icon: "text-blue-600"
-        },
-        warning: {
-            card: "border-amber-200 hover:border-amber-300 bg-gradient-to-br from-amber-50 to-amber-25",
-            label: "text-amber-700",
-            amount: "text-amber-900",
-            icon: "text-amber-600"
-        },
-        success: {
-            card: "border-emerald-200 hover:border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-25",
-            label: "text-emerald-700",
-            amount: "text-emerald-900",
-            icon: "text-emerald-600"
-        }
-    }
+  const v = variantStyles[variant];
 
-    const currentVariant = variantStyles[variant]
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => e.key === "Enter" && onClick?.()}
+      className={cn(
+        "bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 px-4 py-3 cursor-pointer",
+        "transition-colors duration-150 hover:bg-[#faf9fc] dark:hover:bg-gray-800",
+        "first:rounded-l-md last:rounded-r-md",
+        active &&
+          "bg-[#f5f3ff] dark:bg-indigo-950/30 border-[#c4b5fd] dark:border-indigo-700",
+        className,
+      )}
+    >
+      <p className="text-[11px] text-[#80708f] dark:text-gray-400 uppercase tracking-wide mb-1 truncate">
+        {label}
+      </p>
 
-    return (
-        <Card
-            className={cn(
-                "group transition-all h-[130px] cursor-pointer duration-300 overflow-hidden",
-                currentVariant.card,
-                onClick && "cursor-pointer hover:shadow-lg active:scale-[0.98]",
-                className
-            )}
-            onClick={onClick}
-            role={onClick ? "button" : "article"}
-            tabIndex={onClick ? 0 : -1}
-        >
-            <div className="p-5">
-                <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                            <p className={cn(
-                                "text-sm font-medium tracking-wide uppercase truncate",
-                                currentVariant.label
-                            )}>
-
-                                {label}
-                            </p>
-                            {loading && (
-                                <div className="w-2 h-2">
-                                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-current"></div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-baseline gap-2 mb-2">
-                            <span className={cn(
-                                "text-3xl font-bold tracking-tight",
-                                currentVariant.amount
-                            )}>
-                                {loading ? '...' : amount}
-                            </span>
-                        </div>
-
-
-                    </div>
-
-                    {icon && (
-                        <div className={cn(
-                            "flex-shrink-0",
-                            "p-3 rounded-full transition-all duration-300",
-                            "bg-white/80 backdrop-blur-sm",
-                            "group-hover:scale-110 group-hover:rotate-6",
-                            onClick && "group-active:scale-95",
-                            currentVariant.icon
-                        )}>
-                            <div className="w-6 h-6">
-                                {icon}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Progress indicator for loading state */}
-                {loading && (
-                    <div className="mt-4 w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                        <div className="animate-pulse h-full bg-gradient-to-r from-transparent via-gray-300 to-transparent w-1/2"></div>
-                    </div>
-                )}
-            </div>
-        </Card>
-    )
+      {loading ? (
+        <div className="h-5 w-10 rounded bg-[#f0eef5] dark:bg-gray-800 animate-pulse mt-0.5" />
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", v.dot)} />
+          <span className={cn("text-xl font-semibold font-mono", v.amount)}>
+            {amount ?? "—"}
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default RequestListCards
+export default RequestListCards;

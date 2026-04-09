@@ -72,7 +72,6 @@ export default function Dashboard({
   handleDateRangeChange: (date: string) => void;
   activeFilter: string | null;
 }) {
-  console.log("🚀 ~ Dashboard ~ activeFilter:", activeFilter);
   const { overview, insights } = data;
 
   const monthlyData = data.monthlyTrends.map((m) => ({
@@ -109,10 +108,10 @@ export default function Dashboard({
               <button
                 onClick={() => handleDateRangeChange(p.label)}
                 key={p.label}
-                className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
+                className={`px-2.5 py-1 text-xs dark:text-white rounded font-medium transition-colors ${
                   activeFilter === p.label
                     ? "bg-[#6366f1] text-white"
-                    : "text-[#80708f] hover:bg-[#f0eef5]"
+                    : "text-[#80708f] dark:hover:bg-accent hover:bg-[#f0eef5]"
                 }`}
               >
                 {p.label}
@@ -121,25 +120,25 @@ export default function Dashboard({
           </div>
         </div>
         {/* STAT STRIP */}
-        <div className="grid grid-cols-2 gap-px bg-[#e0dfe8] rounded-md overflow-hidden border border-[#e0dfe8] lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-px bg-[#e0dfe8] dark:bg-[#333] rounded-md overflow-hidden border border-[#e0dfe8] lg:grid-cols-5">
           {[
             { label: "Total Requests", value: overview.total, mono: true },
             {
               label: "Approved",
               value: overview.approved,
-              color: "text-emerald-600",
+              color: "text-emerald-600 dark:text-emerald-400",
               mono: true,
             },
             {
               label: "Pending",
               value: overview.pending,
-              color: "text-amber-500",
+              color: "text-amber-500 dark:text-amber-400",
               mono: true,
             },
             {
               label: "Rejected",
               value: overview.rejected,
-              color: "text-red-500",
+              color: "text-red-500 dark:text-red-400",
               mono: true,
             },
             {
@@ -150,13 +149,13 @@ export default function Dashboard({
           ].map((s) => (
             <div
               key={s.label}
-              className={`bg-white px-4 py-3 ${s.span ? "col-span-2 lg:col-span-1" : ""}`}
+              className={`bg-white dark:bg-black px-4 py-3 ${s.span ? "col-span-2 lg:col-span-1" : ""}`}
             >
-              <p className="text-[11px] text-[#80708f] uppercase tracking-wide mb-1">
+              <p className="text-[11px] text-[#80708f] dark:text-white uppercase tracking-wide mb-1">
                 {s.label}
               </p>
               <p
-                className={`text-xl font-semibold ${s.color || "text-[#1d1d24]"} ${s.mono ? "font-mono" : ""}`}
+                className={`text-xl font-semibold ${s.color || "text-[#1d1d24] dark:text-white"} ${s.mono ? "font-mono" : ""}`}
               >
                 {s.value}
               </p>
@@ -168,25 +167,25 @@ export default function Dashboard({
         <div className="flex gap-5 text-xs text-[#80708f] border-b border-[#e0dfe8] pb-4">
           <span>
             Approval rate{" "}
-            <strong className="text-[#1d1d24] font-semibold">
+            <strong className="text-[#1d1d24] dark:text-white font-semibold">
               {insights.approvalRate}%
             </strong>
           </span>
-          <span className="text-[#e0dfe8]">|</span>
+          <span className="dark:text-white text-[#e0dfe8]">|</span>
           <span>
             Avg processing{" "}
-            <strong className="text-[#1d1d24] font-semibold">
+            <strong className="text-[#1d1d24] dark:text-white font-semibold">
               {insights.avgProcessingDays} days
             </strong>
           </span>
-          <span className="text-[#e0dfe8]">|</span>
+          <span className="dark:text-white text-[#e0dfe8]">|</span>
           <span>
             Top dept{" "}
-            <strong className="text-[#1d1d24] font-semibold">
+            <strong className="dark:text-white text-[#1d1d24] font-semibold">
               {insights.topDepartment}
             </strong>
           </span>
-          <span className="text-[#e0dfe8]">|</span>
+          <span className="text-[#e0dfe8] dark:text-white">|</span>
           <span>
             MoM{" "}
             <strong
@@ -207,8 +206,8 @@ export default function Dashboard({
         {/* CHARTS */}
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Monthly spend — takes 2 cols */}
-          <div className="lg:col-span-2 bg-white border border-[#e0dfe8] rounded-md p-4">
-            <p className="text-xs font-medium text-[#80708f] uppercase tracking-wide mb-3">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md p-4">
+            <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide mb-3">
               Monthly Spend
             </p>
             <div className="h-[200px]">
@@ -216,7 +215,7 @@ export default function Dashboard({
                 <BarChart data={monthlyData} barSize={14} barGap={2}>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="#f0eef5"
+                    stroke="#f0eef5 dark:stroke-gray-800"
                     vertical={false}
                   />
                   <XAxis
@@ -244,8 +243,8 @@ export default function Dashboard({
           </div>
 
           {/* Category donut */}
-          <div className="bg-white border border-[#e0dfe8] rounded-md p-4">
-            <p className="text-xs font-medium text-[#80708f] uppercase tracking-wide mb-3">
+          <div className="bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md p-4">
+            <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide mb-3">
               By Category
             </p>
             <div className="h-[140px]">
@@ -283,9 +282,11 @@ export default function Dashboard({
                       className="w-2 h-2 rounded-sm shrink-0"
                       style={{ background: c.color }}
                     />
-                    <span className="text-[#1d1d24] capitalize">{c.name}</span>
+                    <span className="text-[#1d1d24] dark:text-gray-200 capitalize">
+                      {c.name}
+                    </span>
                   </div>
-                  <span className="text-[#80708f] font-mono">
+                  <span className="text-[#80708f] dark:text-gray-400 font-mono">
                     {Math.round((c.value / totalReqs) * 100)}%
                   </span>
                 </div>
@@ -295,8 +296,8 @@ export default function Dashboard({
         </div>
 
         {/* REQUEST VOLUME LINE */}
-        <div className="bg-white border border-[#e0dfe8] rounded-md p-4">
-          <p className="text-xs font-medium text-[#80708f] uppercase tracking-wide mb-3">
+        <div className="bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md p-4">
+          <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide mb-3">
             Request Volume
           </p>
           <div className="h-[120px]">
@@ -304,7 +305,7 @@ export default function Dashboard({
               <LineChart data={monthlyData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#f0eef5"
+                  stroke="#f0eef5 dark:stroke-gray-800"
                   vertical={false}
                 />
                 <XAxis
@@ -351,7 +352,7 @@ export default function Dashboard({
 
         {/* TABLES */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <SentryTable
+          <Table
             title="By Department"
             columns={[
               { key: "name", label: "Department" },
@@ -368,7 +369,7 @@ export default function Dashboard({
               pending: d.pending,
             }))}
           />
-          <SentryTable
+          <Table
             title="By Location"
             columns={[
               { key: "name", label: "Location" },
@@ -388,20 +389,20 @@ export default function Dashboard({
         </div>
 
         {/* RECENT */}
-        <div className="bg-white border border-[#e0dfe8] rounded-md overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#e0dfe8]">
-            <p className="text-xs font-medium text-[#80708f] uppercase tracking-wide">
+        <div className="bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#e0dfe8] dark:border-gray-700">
+            <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide">
               Recent Requisitions
             </p>
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#e0dfe8]">
+              <tr className="border-b border-[#e0dfe8] dark:border-gray-700">
                 {["Title", "Department", "Amount", "Status", "Date"].map(
                   (h) => (
                     <th
                       key={h}
-                      className="px-4 py-2 text-left text-[11px] text-[#80708f] uppercase tracking-wide font-medium"
+                      className="px-4 py-2 text-left text-[11px] text-[#80708f] dark:text-gray-400 uppercase tracking-wide font-medium"
                     >
                       {h}
                     </th>
@@ -413,15 +414,15 @@ export default function Dashboard({
               {data.recentRequisitions.map((req) => (
                 <tr
                   key={req._id}
-                  className="border-b border-[#f0eef5] hover:bg-[#faf9fc] transition-colors"
+                  className="border-b border-[#f0eef5] dark:border-gray-800 hover:bg-[#faf9fc] dark:hover:bg-gray-800/50 transition-colors"
                 >
-                  <td className="px-4 py-2.5 font-medium text-[#1d1d24] max-w-[180px] truncate">
+                  <td className="px-4 py-2.5 font-medium text-[#1d1d24] dark:text-gray-200 max-w-[180px] truncate">
                     {req.title}
                   </td>
-                  <td className="px-4 py-2.5 text-[#80708f]">
+                  <td className="px-4 py-2.5 text-[#80708f] dark:text-gray-400">
                     {req.department}
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-[#1d1d24]">
+                  <td className="px-4 py-2.5 font-mono text-[#1d1d24] dark:text-gray-200">
                     {fmt(req.totalAmount)}
                   </td>
                   <td className="px-4 py-2.5">
@@ -429,12 +430,12 @@ export default function Dashboard({
                       <span
                         className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[req.status] || "bg-gray-400"}`}
                       />
-                      <span className="text-[#1d1d24] capitalize">
+                      <span className="text-[#1d1d24] dark:text-gray-200 capitalize">
                         {req.status}
                       </span>
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-[#80708f] font-mono">
+                  <td className="px-4 py-2.5 text-[#80708f] dark:text-gray-400 font-mono">
                     {new Date(req.requestedOn).toLocaleDateString("en-GB", {
                       day: "numeric",
                       month: "short",
@@ -451,8 +452,7 @@ export default function Dashboard({
   );
 }
 
-/* ---- SENTRY-STYLE TABLE ---- */
-function SentryTable({
+function Table({
   title,
   columns,
   rows,
@@ -462,19 +462,19 @@ function SentryTable({
   rows: Record<string, string | number>[];
 }) {
   return (
-    <div className="bg-white border border-[#e0dfe8] rounded-md overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#e0dfe8]">
-        <p className="text-xs font-medium text-[#80708f] uppercase tracking-wide">
+    <div className="bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#e0dfe8] dark:border-gray-700">
+        <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide">
           {title}
         </p>
       </div>
       <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-[#e0dfe8]">
+          <tr className="border-b border-[#e0dfe8] dark:border-gray-700">
             {columns.map((c) => (
               <th
                 key={c.key}
-                className="px-4 py-2 text-left text-[11px] text-[#80708f] uppercase tracking-wide font-medium"
+                className="px-4 py-2 text-left text-[11px] text-[#80708f] dark:text-gray-400 uppercase tracking-wide font-medium"
               >
                 {c.label}
               </th>
@@ -485,12 +485,12 @@ function SentryTable({
           {rows.map((row, i) => (
             <tr
               key={i}
-              className="border-b border-[#f0eef5] hover:bg-[#faf9fc] transition-colors last:border-0"
+              className="border-b border-[#f0eef5] dark:border-gray-800 hover:bg-[#faf9fc] dark:hover:bg-gray-800/50 transition-colors last:border-0"
             >
               {columns.map((c) => (
                 <td
                   key={c.key}
-                  className="px-4 py-2.5 text-[#1d1d24] font-mono"
+                  className="px-4 py-2.5 text-[#1d1d24] dark:text-gray-200 font-mono"
                 >
                   {row[c.key]}
                 </td>
