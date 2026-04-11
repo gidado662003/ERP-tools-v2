@@ -6,7 +6,7 @@ import LayoutClient from "./LayoutClient";
 export const metadata: Metadata = {
   title: "syscodes Tools",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/syscode.ico",
   },
 };
 

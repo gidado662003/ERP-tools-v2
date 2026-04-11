@@ -9,6 +9,7 @@ import { DataTable } from "@/components/dashboard/data-table";
 import { inventoryAPI } from "@/lib/inventoryApi";
 import type { Asset } from "@/lib/inventoryTypes";
 import { formatDate } from "@/helper/dateFormat";
+import { Move, ArrowLeftRight, History } from "lucide-react";
 import { ArrowLeft, Search, Package, Box } from "lucide-react";
 import Link from "next/link";
 
@@ -59,7 +60,6 @@ export default function AssetProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [searchLoad, setSearchLoad] = useState(false);
-
   useEffect(() => {
     if (!productId) return;
     const fetchAssets = async () => {
@@ -88,6 +88,7 @@ export default function AssetProductDetailPage() {
   );
 
   const rows = assets.map((a) => ({
+    _id: a._id,
     serialNumber: (
       <span className="font-mono text-sm">{a.serialNumber || "—"}</span>
     ),
@@ -99,7 +100,7 @@ export default function AssetProductDetailPage() {
     location: <span className="text-sm">{a.location || "Main Warehouse"}</span>,
     assignedTo: (
       <span className="text-sm">
-        {a.movements ? a.movements[0].toHolderSnapshot?.name : "—"}
+        {a?.movements?.[0]?.toHolderSnapshot?.name ?? "—"}
       </span>
     ),
     type: (
@@ -117,26 +118,30 @@ export default function AssetProductDetailPage() {
         {formatDate(a.updatedAt)}
       </span>
     ),
-    history: (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-        asChild
-      >
-        <Link href={`/inventory/assets/history/${a._id}`}>History</Link>
-      </Button>
-    ),
-    movement: (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-        asChild
-      >
-        <Link href={`/inventory/assets/movement/${a._id}`}>Movement</Link>
-      </Button>
-    ),
+    // actions: (
+    //   <div className="flex items-center gap-2">
+    //     <Button
+    //       variant="ghost"
+    //       size="sm"
+    //       className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+    //       asChild
+    //     >
+    //       <Link href={`/inventory/assets/history/${a._id}`}>
+    //         <History />
+    //       </Link>
+    //     </Button>
+    //     <Button
+    //       variant="ghost"
+    //       size="sm"
+    //       className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+    //       asChild
+    //     >
+    //       <Link href={`/inventory/assets/movement/${a._id}`}>
+    //         <Move />
+    //       </Link>
+    //     </Button>
+    //   </div>
+    // ),
   }));
 
   if (loading) {
@@ -174,29 +179,6 @@ export default function AssetProductDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 px-0 -ml-1 text-muted-foreground hover:text-foreground h-8"
-          onClick={() => router.push("/inventory/assets")}
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Button>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              {productName}
-            </h1>
-            {category && (
-              <p className="text-sm text-muted-foreground mt-0.5">{category}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map(({ label, key, color }) => (
@@ -211,7 +193,6 @@ export default function AssetProductDetailPage() {
           </div>
         ))}
       </div>
-
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground shrink-0">
@@ -234,7 +215,6 @@ export default function AssetProductDetailPage() {
           />
         </div>
       </div>
-
       {/* Table */}
       <div className="rounded-lg border bg-card overflow-hidden">
         {!searchLoad && assets.length === 0 && search ? (
@@ -249,6 +229,7 @@ export default function AssetProductDetailPage() {
           </div>
         ) : (
           <DataTable
+            title="Asset Summary"
             columns={[
               { key: "serialNumber", label: "Serial" },
               { key: "status", label: "Status" },
@@ -257,13 +238,28 @@ export default function AssetProductDetailPage() {
               { key: "type", label: "Type" },
               { key: "createdAt", label: "Created" },
               { key: "updatedAt", label: "Updated" },
-              { key: "history", label: "" },
-              { key: "movement", label: "" },
             ]}
-            data={rows}
-            getRowKey={(_, i) => assets[i]?._id ?? i}
+            rows={rows}
             emptyMessage="No assets found for this product"
             striped
+            actions={[
+              {
+                icon: History,
+                label: "History",
+                task: (id) => {
+                  router.push(`/inventory/assets/history/${id}`);
+                },
+                color: "text-yellow-300",
+              },
+              {
+                icon: Move,
+                label: "Movement",
+                task: (id) => {
+                  router.push(`/inventory/assets/movement/${id}`);
+                },
+                color: "text-green-400",
+              },
+            ]}
           />
         )}
       </div>

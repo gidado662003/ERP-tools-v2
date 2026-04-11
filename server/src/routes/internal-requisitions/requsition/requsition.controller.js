@@ -8,6 +8,13 @@ async function getAllDataFigures(req, res) {
     res.status(200).json(figures);
   } catch (error) {
     console.error(error);
+    Sentry.captureException(error, {
+      tags: { section: "get-all-data-figures" },
+      extra: {
+        userId: req.user?.id,
+        department: req.user?.department,
+      },
+    });
     res.status(500).json({ message: "Failed to fetch requisition figures" });
   }
 }
@@ -18,9 +25,18 @@ async function getAllData(req, res) {
     res.status(200).json(result);
   } catch (error) {
     console.error(error);
+    Sentry.captureException(error, {
+      tags: { section: "get-all-data" },
+      extra: {
+        userId: req.user?.id,
+        department: req.user?.department,
+        query: req.query,
+      },
+    });
     res.status(500).json({ message: "Error getting data" });
   }
 }
+
 async function getDataById(req, res) {
   try {
     const { id } = req.params;
@@ -31,6 +47,13 @@ async function getDataById(req, res) {
     if (error.statusCode === 404) {
       return res.status(404).json({ message: error.message });
     }
+    Sentry.captureException(error, {
+      tags: { section: "get-data-by-id" },
+      extra: {
+        userId: req.user?.id,
+        requisitionId: req.params.id,
+      },
+    });
     res.status(500).json({ message: "Error getting data" });
   }
 }
@@ -74,6 +97,15 @@ async function updateRequest(req, res) {
     if (error.statusCode === 404) {
       return res.status(404).json({ message: "Not found" });
     }
+    Sentry.captureException(error, {
+      tags: { section: "update-request" },
+      extra: {
+        userId: req.user?.id,
+        department: req.user?.department,
+        requisitionId: id,
+        updatePayload: data,
+      },
+    });
     res.status(500).json({ message: "Error updating request" });
   }
 }

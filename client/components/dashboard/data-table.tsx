@@ -1,19 +1,14 @@
 import React from "react";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 export type TableColumn = {
-  /** Unique key used to read from each row object */
+  _id?: string;
   key: string;
-  /** Header label to display */
   label: string;
-  /** Optional extra classes for the header cell */
   className?: string;
 };
 
@@ -21,64 +16,98 @@ export type TableRowData = {
   [key: string]: React.ReactNode;
 };
 
+export interface Action {
+  icon: React.ElementType;
+  task: (row: any) => void;
+  color?: string;
+  label: string;
+}
 export interface DataTableProps {
-  /** Column configuration for the table */
   columns: TableColumn[];
-  /** Array of row objects. Values can be plain text or JSX */
-  data: TableRowData[];
-  /** Optional function to generate a unique key per row */
-  getRowKey?: (row: TableRowData, index: number) => React.Key;
-  /** Optional message when there is no data */
+  rows: TableRowData[];
   emptyMessage?: string;
-  /** Apply zebra striping to rows */
   striped?: boolean;
+  title: string;
+  actions?: Action[];
 }
 
 export function DataTable({
   columns,
-  data,
-  getRowKey,
+  rows,
+  title,
   emptyMessage = "No data available",
   striped = false,
+  actions,
 }: DataTableProps) {
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            {columns.map((column) => (
-              <TableHead
-                key={column.key}
-                className={`font-semibold ${column.className ?? ""}`}
+    <div className="bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#e0dfe8] dark:border-gray-700">
+        <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide">
+          {title}
+        </p>
+      </div>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-[#e0dfe8] dark:border-gray-700">
+            {columns.map((c) => (
+              <th
+                key={c.key}
+                className="px-4 py-2 text-left text-[11px] text-[#80708f] dark:text-gray-400 uppercase tracking-wide font-medium"
               >
-                {column.label}
-              </TableHead>
+                {c.label}
+              </th>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((row, index) => (
-            <TableRow
-              key={getRowKey ? getRowKey(row, index) : index}
-              className={
-                striped && index % 2 === 0 ? "bg-muted/20" : undefined
-              }
+            <th className="text-right pr-2">
+              {" "}
+              {actions?.length && actions?.length > 0 && <>Actions</>}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows?.map((row, i) => (
+            <tr
+              key={i}
+              className="border-b border-[#f0eef5] dark:border-gray-800 hover:bg-[#faf9fc] dark:hover:bg-gray-800/50 transition-colors last:border-0"
             >
-              {columns.map((column) => (
-                <TableCell key={column.key}>
-                  {row[column.key] ?? ""}
-                </TableCell>
+              {columns.map((c) => (
+                <>
+                  <td
+                    key={c.key}
+                    className="px-4 py-2.5 text-[#1d1d24] dark:text-gray-200 font-mono"
+                  >
+                    {row[c.key]}
+                  </td>
+                </>
               ))}
-            </TableRow>
+              <td>
+                {actions?.length && actions?.length > 0 && (
+                  <div className="flex cursor-pointer pr-3 items-center justify-end gap-2">
+                    {actions.map((items, index) => {
+                      const Icon = items.icon;
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <button
+                              key={index}
+                              className={`p-1 cursor-pointer rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${items.color}`}
+                              onClick={() => items.task(row._id)}
+                            >
+                              <Icon />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{items.label}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                )}
+              </td>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
-      {data.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          {emptyMessage}
-        </div>
-      )}
+        </tbody>
+      </table>
     </div>
   );
 }
-

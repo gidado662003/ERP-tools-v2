@@ -67,7 +67,7 @@ function RequestListCards({
       </p>
 
       {loading ? (
-        <div className="h-5 w-10 rounded bg-[#f0eef5] dark:bg-gray-800 animate-pulse mt-0.5" />
+        <div className="h-5 w-10 rounded  dark:bg-gray-800 animate-pulse mt-0.5" />
       ) : (
         <div className="flex items-center gap-1.5">
           <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", v.dot)} />

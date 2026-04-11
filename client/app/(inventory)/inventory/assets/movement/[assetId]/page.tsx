@@ -367,7 +367,7 @@ export default function NewMovementPage() {
       };
       await inventoryAPI.createMovement(payload);
       toast.success("Movement recorded successfully");
-      router.refresh();
+      router.push(`/assets/${assetId}`);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
       toast.error(

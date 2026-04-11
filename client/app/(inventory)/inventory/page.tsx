@@ -30,14 +30,14 @@ export default function InventoryDashboardPage() {
 
   const totalItems = inventory.length;
   const totalQuantity = inventory.reduce((sum, i) => sum + i.quantity, 0);
-  const uniqueLocations = new Set(
-    inventory.map((i) => i.location || "N/A")
-  ).size;
+  const uniqueLocations = new Set(inventory.map((i) => i.location || "N/A"))
+    .size;
   const lowStockCount = inventory.filter(
-    (i) => i.quantity > 0 && i.quantity <= LOW_STOCK_THRESHOLD
+    (i) => i.quantity > 0 && i.quantity <= LOW_STOCK_THRESHOLD,
   ).length;
 
   const tableData = inventory.map((item) => ({
+    _id: item._id,
     productName: (
       <span className="font-medium">{item.product?.name || "—"}</span>
     ),
@@ -94,28 +94,18 @@ export default function InventoryDashboardPage() {
         />
       </div>
 
-      <div className="rounded-lg border bg-card">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Inventory Summary</h2>
-          <p className="text-sm text-muted-foreground">
-            All stocked items across locations
-          </p>
-        </div>
-        <div className="p-4">
-          <DataTable
-            columns={[
-              { key: "productName", label: "Product" },
-              { key: "quantity", label: "Quantity" },
-              { key: "location", label: "Location" },
-              { key: "lastUpdated", label: "Last Updated" },
-            ]}
-            data={tableData}
-            getRowKey={(_, i) => inventory[i]?._id ?? i}
-            emptyMessage="No inventory items found"
-            striped
-          />
-        </div>
-      </div>
+      <DataTable
+        columns={[
+          { key: "productName", label: "Product" },
+          { key: "quantity", label: "Quantity" },
+          { key: "location", label: "Location" },
+          { key: "lastUpdated", label: "Last Updated" },
+        ]}
+        rows={tableData}
+        emptyMessage="No inventory items found"
+        striped
+        title="Inventory Summary"
+      />
     </div>
   );
 }

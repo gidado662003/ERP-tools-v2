@@ -86,7 +86,7 @@ interface DisplayModeState {
 export const useDisplayMode = create<DisplayModeState>()(
   persist(
     (set, get) => ({
-      mode: "light",
+      mode: "dark",
 
       setMode: (mode) => {
         const html = document.documentElement;

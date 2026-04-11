@@ -60,7 +60,16 @@ async function getAmountRanges({ startDate, endDate }) {
     {
       $bucket: {
         groupBy: "$totalAmount",
-        boundaries: [0, 10000, 50000, 100000, 250000, 500000, 1000000, Infinity],
+        boundaries: [
+          0,
+          10000,
+          50000,
+          100000,
+          250000,
+          500000,
+          1000000,
+          Infinity,
+        ],
         default: "Other",
         output: {
           count: { $sum: 1 },
@@ -84,7 +93,10 @@ async function getAmountRanges({ startDate, endDate }) {
               { case: { $eq: ["$_id", 50000] }, then: "₦50,001 - ₦100,000" },
               { case: { $eq: ["$_id", 100000] }, then: "₦100,001 - ₦250,000" },
               { case: { $eq: ["$_id", 250000] }, then: "₦250,001 - ₦500,000" },
-              { case: { $eq: ["$_id", 500000] }, then: "₦500,001 - ₦1,000,000" },
+              {
+                case: { $eq: ["$_id", 500000] },
+                then: "₦500,001 - ₦1,000,000",
+              },
               { case: { $eq: ["$_id", 1000000] }, then: "₦1,000,000+" },
             ],
             default: "Other",
@@ -541,4 +553,3 @@ module.exports = {
   getHourlyPatterns,
   getDashboardMetrics,
 };
-

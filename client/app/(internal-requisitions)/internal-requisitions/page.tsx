@@ -17,7 +17,19 @@ function DashboardPage() {
     const fetchDashboardData = async () => {
       setLoading(true);
       const selectedDateRange = searchParams.get("date");
-      const resolvedRange = getDateRange({ label: selectedDateRange || "All" });
+      if (!selectedDateRange) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("date", "All");
+
+        window.history.replaceState(
+          null,
+          "",
+          `${pathname}?${params.toString()}`,
+        );
+      }
+      const resolvedRange = getDateRange({
+        label: selectedDateRange || "All",
+      });
       const res = await internalRequestAPI.getDashboardData({
         dateRange: resolvedRange,
       });

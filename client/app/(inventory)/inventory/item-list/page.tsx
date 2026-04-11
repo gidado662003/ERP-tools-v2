@@ -32,7 +32,7 @@ export default function InventoryItemListPage() {
     return inventory.filter(
       (item) =>
         item.product?.name?.toLowerCase().includes(q) ||
-        (item.location || "").toLowerCase().includes(q)
+        (item.location || "").toLowerCase().includes(q),
     );
   }, [inventory, search]);
 
@@ -41,9 +41,7 @@ export default function InventoryItemListPage() {
       <span className="font-medium">{item.product?.name || "—"}</span>
     ),
     category: (
-      <span className="capitalize">
-        {item.product?.category || "—"}
-      </span>
+      <span className="capitalize">{item.product?.category || "—"}</span>
     ),
     unit: item.product?.unit || "pcs",
     quantity: <span className="font-semibold">{item.quantity}</span>,
@@ -85,6 +83,7 @@ export default function InventoryItemListPage() {
       <div className="rounded-lg border bg-card">
         <div className="p-4">
           <DataTable
+            title="Batch"
             columns={[
               { key: "productName", label: "Product" },
               { key: "category", label: "Category" },
@@ -93,8 +92,7 @@ export default function InventoryItemListPage() {
               { key: "location", label: "Location" },
               { key: "lastUpdated", label: "Last Updated" },
             ]}
-            data={tableData}
-            getRowKey={(_, i) => filteredInventory[i]?._id ?? i}
+            rows={tableData}
             emptyMessage={
               search ? "No items match your search" : "No inventory items found"
             }
