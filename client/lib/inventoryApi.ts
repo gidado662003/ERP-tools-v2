@@ -122,7 +122,7 @@ export const inventoryAPI = {
     },
   ): Promise<ProcurementBatch> => {
     const res = await inventoryApi.post<ProcurementBatch>(
-      `/procurement-batches/${batchId}`,
+      `/procurement-batches/${batchId}/recive`,
       payload,
     );
     return res.data;

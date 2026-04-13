@@ -90,7 +90,9 @@ export function DataTable({
                             <button
                               key={index}
                               className={`p-1 cursor-pointer rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${items.color}`}
-                              onClick={() => items.task(row._id)}
+                              onClick={() => {
+                                items.task(row._id);
+                              }}
                             >
                               <Icon />
                             </button>

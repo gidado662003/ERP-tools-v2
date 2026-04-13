@@ -23,8 +23,9 @@ const batchProductController = {
       res.status(500).json({ error: error.message });
     }
   },
-  getBatchProduct: async (req, res) => {
+  reciveProduct: async (req, res) => {
     try {
+      console.log("🚀 ~ getBatchProduct ~ req.Id:", req.params.id);
       const { quantity, assetMetas, performedBy } = req.body;
       const batchProduct = await getBatchProduct(
         req.params.id,

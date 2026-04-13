@@ -118,30 +118,6 @@ export default function AssetProductDetailPage() {
         {formatDate(a.updatedAt)}
       </span>
     ),
-    // actions: (
-    //   <div className="flex items-center gap-2">
-    //     <Button
-    //       variant="ghost"
-    //       size="sm"
-    //       className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-    //       asChild
-    //     >
-    //       <Link href={`/inventory/assets/history/${a._id}`}>
-    //         <History />
-    //       </Link>
-    //     </Button>
-    //     <Button
-    //       variant="ghost"
-    //       size="sm"
-    //       className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-    //       asChild
-    //     >
-    //       <Link href={`/inventory/assets/movement/${a._id}`}>
-    //         <Move />
-    //       </Link>
-    //     </Button>
-    //   </div>
-    // ),
   }));
 
   if (loading) {

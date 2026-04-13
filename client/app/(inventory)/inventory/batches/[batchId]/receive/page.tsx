@@ -53,7 +53,7 @@ export default function ReceiveBatchPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [quantity, setQuantity] = useState<number>(0);
-  const [ assetMetas, setAssetMetas] = useState<AssetMeta[]>([]);
+  const [assetMetas, setAssetMetas] = useState<AssetMeta[]>([]);
 
   const remainingToReceive = batch
     ? batch.expectedQuantity - batch.receivedQuantity
@@ -378,12 +378,12 @@ export default function ReceiveBatchPage() {
                 <div className="relative">
                   <Input
                     id="qty"
-                    type="number"
-                    max={remainingToReceive}
+                    type="text"
+                    // max={remainingToReceive}
                     value={quantity}
-                    onChange={(e) =>
-                      handleQuantityChange(parseInt(e.target.value) || 0)
-                    }
+                    // onChange={(e) =>
+                    //   handleQuantityChange(parseInt(e.target.value) || 0)
+                    // }
                     className="text-lg font-semibold h-12 pr-12"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
