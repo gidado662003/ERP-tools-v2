@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const InternalRequisition = require("../models/internal-requsitions-schema");
 const Category = require("../models/internal-documents-category.schema");
+const Supplier = require("../models/supplier.schema");
 const Document = require("../models/internal-documents.schema");
 const sendEmail = require("../helper/mailTemplate");
 const Sentry = require("@sentry/node");
@@ -346,7 +347,8 @@ async function updateRequest(id, data, user) {
 
     const isApprovedOrCompleted =
       data.status === "approved" || data.status === "completed";
-    const isEquipmentProcured = data.category === "equipment-procured";
+
+    const isEquipmentProcured = request.category === "equipment-procured";
 
     if (isApprovedOrCompleted && isEquipmentProcured) {
       await createProductsFromRequest(request, session);

@@ -158,3 +158,13 @@ export interface AssetHistory {
   updatedAt: string;
   __v?: number;
 }
+
+export interface Supplier {
+  _id: string;
+  name: string;
+  contact: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+  productsSupplied?: number;
+}

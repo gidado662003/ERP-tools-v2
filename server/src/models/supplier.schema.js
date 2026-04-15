@@ -15,11 +15,6 @@ const supplierSchema = new mongoose.Schema(
       phone: String,
       address: String,
     },
-
-    productsSupplied: {
-      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
-      default: [],
-    },
   },
   { timestamps: true },
 );

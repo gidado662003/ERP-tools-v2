@@ -18,6 +18,7 @@ const supplierController = {
     const { search } = req.query;
     try {
       const suppliers = await getSuppliers(search);
+
       res.status(200).json(suppliers);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch suppliers" });

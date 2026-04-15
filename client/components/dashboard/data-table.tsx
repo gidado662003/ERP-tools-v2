@@ -94,7 +94,7 @@ export function DataTable({
                                 items.task(row._id);
                               }}
                             >
-                              <Icon />
+                              <Icon size={13} strokeWidth={1.8} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>

@@ -20,7 +20,7 @@ requestApi.interceptors.response.use(
       if (status === 401) {
         console.error("Session expired. Redirecting...");
         if (typeof window !== "undefined") {
-          window.location.href = "http://10.10.253.3:8000/";
+          window.location.href = "http://102.36.135.18:8000/";
         }
       }
 

@@ -98,8 +98,17 @@ export default function ReceiveBatchPage() {
   }, [quantity, isAsset]);
 
   const handleQuantityChange = (val: number) => {
-    const qty = Math.max(1, Math.min(remainingToReceive, val));
-    setQuantity(qty);
+    if (val > remainingToReceive) {
+      setQuantity(remainingToReceive);
+      return;
+    }
+
+    if (val < 0) {
+      setQuantity(1);
+      return;
+    }
+
+    setQuantity(val);
   };
 
   const updateAssetMeta = <K extends keyof AssetMeta>(
@@ -379,11 +388,11 @@ export default function ReceiveBatchPage() {
                   <Input
                     id="qty"
                     type="text"
-                    // max={remainingToReceive}
+                    max={remainingToReceive}
                     value={quantity}
-                    // onChange={(e) =>
-                    //   handleQuantityChange(parseInt(e.target.value) || 0)
-                    // }
+                    onChange={(e) =>
+                      handleQuantityChange(parseInt(e.target.value) || 0)
+                    }
                     className="text-lg font-semibold h-12 pr-12"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
