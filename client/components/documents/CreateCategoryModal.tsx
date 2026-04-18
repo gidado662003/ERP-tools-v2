@@ -16,17 +16,23 @@ import { Plus } from "lucide-react";
 interface CreateCategoryModalProps {
   deptLabel: string;
   onCreated: () => void;
-  createCategory: (name: string) => Promise<void>;
+  createCategory: (name: string, parentCategoryId?: string) => Promise<void>;
+  parentCategoryId?: string;
+  triggerLabel?: string;
 }
 
 export default function CreateCategoryModal({
   deptLabel,
   onCreated,
   createCategory,
+  parentCategoryId,
+  triggerLabel = "New Category",
 }: CreateCategoryModalProps) {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const isFolder = !!parentCategoryId;
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -37,7 +43,7 @@ export default function CreateCategoryModal({
       setOpen(false);
       setNewName("");
     } catch (error) {
-      console.error("Failed to create category:", error);
+      console.error("Failed to create:", error);
     } finally {
       setCreating(false);
     }
@@ -46,22 +52,30 @@ export default function CreateCategoryModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
+        <Button size="sm" className="gap-2">
           <Plus className="h-4 w-4" />
-          New Category
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Category</DialogTitle>
+          <DialogTitle>
+            {isFolder ? "Create New Folder" : "Create New Category"}
+          </DialogTitle>
           <DialogDescription>
-            Add a new category to organize your documents in {deptLabel}.
+            {isFolder
+              ? `Add a new folder to organise files in ${deptLabel}.`
+              : `Add a new category to organise your documents in ${deptLabel}.`}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Input
             autoFocus
-            placeholder="e.g., Quarterly Reports, Team Documents..."
+            placeholder={
+              isFolder
+                ? "e.g., Archive, Templates..."
+                : "e.g., Quarterly Reports, Team Documents..."
+            }
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -93,7 +107,7 @@ export default function CreateCategoryModal({
                 />
               </svg>
             )}
-            Create Category
+            {isFolder ? "Create Folder" : "Create Category"}
           </Button>
         </DialogFooter>
       </DialogContent>

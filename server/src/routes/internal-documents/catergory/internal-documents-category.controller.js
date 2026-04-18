@@ -19,6 +19,7 @@ const category = {
     try {
       const user = req.user;
       const department = user.department.name;
+      const parentcategory = req.body.parentCategoryId ?? null;
       const { name } = req.body;
       if (!name) {
         return res.status(400).json({ message: "Category name is required" });
@@ -26,6 +27,7 @@ const category = {
       const newCategory = await createCategory({
         name: name,
         department: department,
+        parent: parentcategory,
         createdBy: {
           id: user.id.toString(),
           name: user.displayName || user.name,

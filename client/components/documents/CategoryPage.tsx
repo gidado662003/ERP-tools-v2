@@ -1,16 +1,12 @@
 "use client";
-import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { documentsApi } from "@/lib/documentsApi";
 import { DocumentFile } from "@/lib/documentsTypes";
-
-// Shadcn UI imports
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -20,17 +16,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { getFileTypeInfo } from "@/lib/fileTypeInfo.tsx";
-
-// Icons
+import CreateCategoryModal from "@/components/documents/CreateCategoryModal";
 import {
   FileText,
   Upload,
@@ -38,76 +25,53 @@ import {
   X,
   ChevronLeft,
   Search,
-  ChevronDown,
+  Folder,
+  Loader2,
 } from "lucide-react";
 
-type SortKey =
-  | "name-asc"
-  | "name-desc"
-  | "size-desc"
-  | "size-asc"
-  | "updated-desc"
-  | "updated-asc";
-
-const SORT_LABELS: Record<SortKey, string> = {
-  "name-asc": "Name (A → Z)",
-  "name-desc": "Name (Z → A)",
-  "size-desc": "Largest first",
-  "size-asc": "Smallest first",
-  "updated-desc": "Recently uploaded",
-  "updated-asc": "Oldest first",
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 export function CategoryPage() {
   const { department, category } = useParams();
+  const slugArray = category as string[];
+  const currentId = slugArray?.[slugArray.length - 1];
+  const path = Array.isArray(category) ? category : category ? [category] : [];
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const query = searchParams.get("q") ?? "";
-  const sort = (searchParams.get("sort") ?? "updated-desc") as SortKey;
 
   const [files, setFiles] = useState<DocumentFile[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [catName, setCatName] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [displayName, setDisplayName] = useState("");
-  const [fileName, setFileName] = useState("");
 
   const deptLabel = String(department).replace(/-/g, " ");
-  const catLabel =
-    files[0]?.category && typeof files[0].category === "object"
-      ? files[0].category.name
-      : String(category).replace(/-/g, " ");
-
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value) params.set(key, value);
-      else params.delete(key);
-      startTransition(() => {
-        router.replace(`?${params.toString()}`, { scroll: false });
-      });
-    },
-    [router, searchParams],
-  );
+  const catLabel = catName || String(category).replace(/-/g, " ");
 
   const fetchFiles = useCallback(async () => {
     setLoading(true);
     try {
-      if (!category) return;
-      const data = await documentsApi.getFilesByCategory(category, {
+      if (!currentId) return;
+      const data = await documentsApi.getFilesByCategory(currentId, {
         q: query,
-        sort,
       });
-      setFiles(data);
+      setFiles(data.documents ?? []);
+      setFolders(data.folders ?? []);
+      if (data.category?.name) setCatName(data.category.name);
     } catch (error) {
       console.error("Failed to fetch files:", error);
     } finally {
       setLoading(false);
     }
-  }, [category, query, sort]);
+  }, [currentId, query]);
 
   useEffect(() => {
     fetchFiles();
@@ -117,19 +81,17 @@ export function CategoryPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedFile(file);
-    const nameWithoutExt = file.name.replace(/\.[^.]+$/, "");
-    setDisplayName(nameWithoutExt);
-    setFileName(nameWithoutExt);
+    setDisplayName(file.name.replace(/\.[^.]+$/, ""));
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !displayName.trim() || !fileName.trim()) return;
+    if (!selectedFile || !displayName.trim()) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("file", selectedFile);
+    formData.append("fileName", selectedFile.name);
     formData.append("name", displayName.trim());
-    formData.append("fileName", fileName.trim());
-    formData.append("category", String(category));
+    formData.append("category", String(currentId));
     try {
       await documentsApi.uploadFile(formData);
       await fetchFiles();
@@ -144,20 +106,21 @@ export function CategoryPage() {
   const handleCancel = () => {
     setSelectedFile(null);
     setDisplayName("");
-    setFileName("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const updateSearch = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set("q", value);
+    else params.delete("q");
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="min-h-screen ">
+      <div className="container mx-auto px-2 py-2 ">
         {/* Breadcrumb */}
-        <Breadcrumb className="mb-8">
+        <Breadcrumb className="mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink href="/documents">Documents</BreadcrumbLink>
@@ -172,340 +135,268 @@ export function CategoryPage() {
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="capitalize">{catLabel}</BreadcrumbPage>
-            </BreadcrumbItem>
+
+            <BreadcrumbPage className="capitalize font-semibold">
+              {slugArray.map((_, index) => {
+                const path = slugArray.slice(0, index + 1).join("/");
+                return (
+                  <>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        key={path}
+                        href={`/documents/${department}/${path}`}
+                        className="capitalize"
+                      >
+                        {slugArray[index].replace(/-/g, " ")}
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                  </>
+                );
+              })}
+            </BreadcrumbPage>
           </BreadcrumbList>
         </Breadcrumb>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-start gap-3">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
             <Link
               href={`/documents/${department}`}
-              className="mt-1 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
             </Link>
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 capitalize">
-                {deptLabel}
-              </p>
-              <h1 className="text-2xl font-semibold capitalize">{catLabel}</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {loading
-                  ? "—"
-                  : `${files.length} ${files.length === 1 ? "file" : "files"}`}
+              <h1 className="text-2xl font-bold capitalize">{catLabel}</h1>
+              <p className="text-sm text-muted-foreground">
+                {files.length} {files.length === 1 ? "file" : "files"}
               </p>
             </div>
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            size="sm"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload
-          </Button>
+          <div className="flex gap-2">
+            <CreateCategoryModal
+              deptLabel={deptLabel}
+              onCreated={fetchFiles}
+              parentCategoryId={currentId as string}
+              createCategory={(name) =>
+                documentsApi.createCategory(name, currentId as string)
+              }
+              triggerLabel="New Folder"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload
+            </Button>
+          </div>
         </div>
 
-        <Separator className="mb-6" />
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search files..."
+            defaultValue={query}
+            onChange={(e) => updateSearch(e.target.value)}
+            className="pl-10 pr-10 h-11"
+          />
+          {query && (
+            <button
+              onClick={() => updateSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
-        {/* Upload card */}
+        {/* Upload Panel */}
         {selectedFile && (
-          <Card className="mb-6 border-primary/40">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="rounded-lg p-2 bg-muted ring-1 ring-border shrink-0">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {selectedFile.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(selectedFile.size)}
-                    </p>
-                  </div>
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg border mb-6 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-primary" />
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleCancel}
-                  disabled={uploading}
-                  className="shrink-0 ml-2 text-muted-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="display-name"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Display Name
-                  </Label>
-                  <Input
-                    id="display-name"
-                    placeholder="e.g. Q1 Report"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    disabled={uploading}
-                  />
+                <div>
+                  <p className="font-medium">{selectedFile.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    How the file appears in the list
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="file-name"
-                    className="text-xs text-muted-foreground"
-                  >
-                    File Name
-                  </Label>
-                  <Input
-                    id="file-name"
-                    placeholder="e.g. q1-report"
-                    value={fileName}
-                    onChange={(e) => setFileName(e.target.value)}
-                    disabled={uploading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Used for storage reference
+                    {formatFileSize(selectedFile.size)}
                   </p>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleCancel}
-                  disabled={uploading}
-                  className="text-muted-foreground"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleUpload}
-                  disabled={
-                    uploading || !displayName.trim() || !fileName.trim()
-                  }
-                >
-                  {uploading ? (
-                    <>
-                      <svg
-                        className="mr-2 h-4 w-4 animate-spin"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Uploading…
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Confirm Upload
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Search + Sort */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search files…"
-              defaultValue={query}
-              onChange={(e) => setParam("q", e.target.value)}
-              className="pl-9 pr-9"
-            />
-            {query && (
-              <button
-                onClick={() => setParam("q", "")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear search"
-              >
+              <Button variant="ghost" size="icon" onClick={handleCancel}>
                 <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+              </Button>
+            </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <Input
+              placeholder="Display name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              disabled={uploading}
+              className="mb-3"
+            />
+
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                className="gap-2 shrink-0 text-muted-foreground"
+                onClick={handleCancel}
+                disabled={uploading}
               >
-                <span className="hidden sm:inline text-foreground">
-                  {SORT_LABELS[sort]}
-                </span>
-                <span className="sm:hidden">Sort</span>
-                <ChevronDown className="h-4 w-4 opacity-60" />
+                Cancel
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuRadioGroup
-                value={sort}
-                onValueChange={(v) => setParam("sort", v)}
+              <Button
+                onClick={handleUpload}
+                disabled={uploading || !displayName.trim()}
               >
-                {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-                  <DropdownMenuRadioItem key={key} value={key}>
-                    {SORT_LABELS[key]}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {query && !loading && (
-          <p className="text-sm text-muted-foreground mb-4">
-            {files.length === 0
-              ? `No files match "${query}"`
-              : `${files.length} ${files.length === 1 ? "result" : "results"} for "${query}"`}
-          </p>
+                {uploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload"
+                )}
+              </Button>
+            </div>
+          </div>
         )}
 
-        {/* File grid */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {/* Content */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <Skeleton className="h-10 w-10 rounded-lg mb-3" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-3 w-2/3" />
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-lg border p-4">
+                <Skeleton className="h-12 w-12 rounded-lg mb-3" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
             ))}
           </div>
-        ) : files.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-14">
-              <div className="rounded-full bg-muted p-4 mb-4">
+        ) : (
+          <>
+            {/* Folders */}
+            {folders.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Folders
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {folders.map((folder) => (
+                    <Link
+                      key={folder._id}
+                      href={`/documents/${department}/${[...path, folder._id].join("/")}`}
+                      className="group flex items-center gap-3 p-3 rounded-lg border bg-white dark:bg-slate-900 hover:border-primary hover:shadow-md transition-all"
+                    >
+                      <Folder className="h-5 w-5 text-primary" />
+                      <span className="font-medium truncate">
+                        {folder.name}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Files */}
+            {files.length === 0 && folders.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="inline-flex p-4 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
+                  {query ? (
+                    <Search className="h-8 w-8 text-muted-foreground" />
+                  ) : (
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                  )}
+                </div>
+                <p className="text-lg font-medium mb-2">
+                  {query ? "No files found" : "Empty folder"}
+                </p>
+                <p className="text-muted-foreground mb-6">
+                  {query
+                    ? `No results for "${query}"`
+                    : "Upload your first file to get started"}
+                </p>
                 {query ? (
-                  <Search className="h-6 w-6 text-muted-foreground" />
+                  <Button variant="outline" onClick={() => updateSearch("")}>
+                    Clear search
+                  </Button>
                 ) : (
-                  <FileText className="h-6 w-6 text-muted-foreground" />
+                  <Button onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload file
+                  </Button>
                 )}
               </div>
-              <h3 className="font-medium mb-1">
-                {query ? "No files found" : "No files yet"}
-              </h3>
-              <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
-                {query
-                  ? `Nothing matched "${query}"`
-                  : "Upload your first file to get started"}
-              </p>
-              {query ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setParam("q", "")}
-                >
-                  Clear search
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload File
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {files.map((file) => {
-              const typeInfo = getFileTypeInfo(file.extension);
-              return (
-                <Link
-                  key={file._id}
-                  href={`/documents/${department}/${category}/${file._id}`}
-                  className="block group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
-                >
-                  <Card className="h-full hover:border-primary/50 hover:shadow-sm transition-all duration-200 overflow-hidden">
-                    <CardContent className="p-4 pb-3">
-                      <div
-                        className={`rounded-lg p-2.5 w-fit mb-3 ring-1 ring-black/5 dark:ring-white/10 ${typeInfo.color}`}
-                      >
-                        {typeInfo.icon}
-                      </div>
-                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors mb-1 leading-snug">
-                        {file.name}
-                      </p>
-                      <div className="flex items-center gap-1.5">
-                        {file.extension && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] px-1.5 py-0 h-4 font-medium uppercase tracking-wide"
+            ) : (
+              files.length > 0 && (
+                <div>
+                  {folders.length > 0 && (
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                      Files
+                    </h2>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {files.map((file) => {
+                      const typeInfo = getFileTypeInfo(file.extension);
+                      return (
+                        <div
+                          key={file._id}
+                          className="group rounded-lg border bg-white dark:bg-slate-900 hover:border-primary hover:shadow-md transition-all overflow-hidden"
+                        >
+                          <Link
+                            href={`/documents/${department}/${category}/${file._id}`}
+                            className="block p-4"
                           >
-                            {file.extension}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {formatFileSize(file.fileSize)}
-                        </span>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="px-4 py-2 flex items-center justify-between border-t bg-muted/20">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(file.createdAt).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )}
-                      </span>
-                      <a
-                        href={`/api/documents/download/${file._id}`}
-                        download
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                        aria-label="Download"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </a>
-                    </CardFooter>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
+                            <div
+                              className={`inline-flex p-2 rounded-lg mb-3 ${typeInfo.color}`}
+                            >
+                              {typeInfo.icon}
+                            </div>
+                            <p className="font-medium truncate mb-2 group-hover:text-primary transition-colors">
+                              {file.name}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <Badge variant="secondary" className="text-xs">
+                                {file.extension}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {formatFileSize(file.fileSize)}
+                              </span>
+                            </div>
+                          </Link>
+                          <div className="border-t px-4 py-2 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(file.createdAt).toLocaleDateString()}
+                            </span>
+                            <a
+                              href={`/api/documents/download/${file._id}`}
+                              download
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            )}
+          </>
         )}
       </div>
     </div>

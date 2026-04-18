@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3001 --webpack",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3001",
     "lint": "eslint",
     "dev:local": "NODE_ENV=development next dev --port 3001",
     "build:prod": "NODE_ENV=production next build",

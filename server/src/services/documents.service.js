@@ -32,6 +32,8 @@ const getCategories = async (user, queryFilter = {}, options = {}) => {
     const canViewAll =
       process.env.NODE_ENV === "development" || user.role === "Admin Manager";
     const query = {
+      parent: null,
+
       ...(!canViewAll && {
         department: user.department.name.toLowerCase(),
       }),
@@ -64,11 +66,13 @@ const getCategories = async (user, queryFilter = {}, options = {}) => {
 };
 
 const createCategory = async (categoryData) => {
-  const { name, department, createdBy } = categoryData;
+  const { name, parent, department, createdBy } = categoryData;
+  console.log("🚀 ~ createCategory ~ parent:", parent);
   try {
     const existingCategory = await Category.findOne({
       name: name.toLowerCase(),
       department,
+      parent,
       createdBy,
     });
     if (existingCategory) {
@@ -80,6 +84,7 @@ const createCategory = async (categoryData) => {
     const newCategory = new Category({
       name: name.toLowerCase(),
       department,
+      parent,
       createdBy,
     });
     await newCategory.save();
@@ -107,6 +112,7 @@ const uploadDocument = async (file, fileData, user) => {
       department: user.department.name,
     },
   };
+  console.log("🚀 ~ uploadDocument ~ dataBuild:", dataBuild);
   const response = await Document.create(dataBuild);
   return response;
 };
@@ -116,6 +122,14 @@ const getFilesByCategory = async (user, category) => {
     const canViewAll =
       process.env.NODE_ENV === "development" || user.role === "Admin Manager";
 
+    const categoryExists = await Category.findById(category)
+      .select("parent name")
+      .lean();
+
+    if (!categoryExists) {
+      throw new Error("Category not found");
+    }
+
     const query = {
       category,
       ...(!canViewAll && {
@@ -123,10 +137,18 @@ const getFilesByCategory = async (user, category) => {
       }),
     };
 
-    return await Document.find(query)
+    const documents = await Document.find(query)
       .populate("category")
       .sort({ createdAt: -1 })
       .lean();
+
+    const subCategories = await Category.find({ parent: category }).lean();
+
+    return {
+      documents,
+      folders: subCategories,
+      category: categoryExists,
+    };
   } catch (error) {
     console.error("Error in getFilesByCategory:", error);
     throw error;

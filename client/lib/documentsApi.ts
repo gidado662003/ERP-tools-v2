@@ -44,9 +44,12 @@ export const documentsApi = {
       throw error;
     }
   },
-  createCategory: async (name: string) => {
+  createCategory: async (name: string, parentCategoryId?: string) => {
     try {
-      const response = await api.post("/document-categories", { name });
+      const response = await api.post("/document-categories", {
+        name,
+        parentCategoryId,
+      });
       return response.data;
     } catch (error) {
       throw error;
@@ -92,7 +95,7 @@ export const documentsApi = {
   },
   getFilesByCategory: async (
     category: string | string[],
-    { q, sort }: { q: string; sort: string },
+    { q, sort }: { q: string; sort?: string },
   ) => {
     try {
       const response = await api.get(`/document/files/${category}`, {

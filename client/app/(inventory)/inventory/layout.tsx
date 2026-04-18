@@ -60,6 +60,15 @@ function InventoryLayout({ children }: { children: React.ReactNode }) {
         { label: "Transfers", href: "/inventory/movements/transfers" },
       ],
     },
+    {
+      href: "/inventory/suppliers",
+      label: "Suppliers",
+      icon: Package,
+      data: [
+        { label: "All Suppliers", href: "/inventory/suppliers" },
+        { label: "Add Supplier", href: "/inventory/suppliers/create" },
+      ],
+    },
   ];
   return (
     <div className="min-h-screen bg-background">
