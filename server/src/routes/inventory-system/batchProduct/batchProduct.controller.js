@@ -2,6 +2,7 @@ const {
   getBatchProducts,
   getBatchById,
   getBatchProduct,
+  createManualProcurementBatch,
 } = require("../../../services/inventory.service");
 const batchProductController = {
   getBatchProducts: async (req, res) => {
@@ -35,6 +36,14 @@ const batchProductController = {
           (req.user && { name: req.user.name, email: req.user.email }),
       );
       res.status(200).json(batchProduct);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+  createManualBatch: async (req, res) => {
+    try {
+      const batch = await createManualProcurementBatch(req.body, req.user);
+      res.status(201).json(batch);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

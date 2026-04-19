@@ -292,6 +292,8 @@ export default function ReceiveBatchPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="pop">POP</SelectItem>
+                            <SelectItem value="noc">NOC</SelectItem>
                             <SelectItem value="equipment">Equipment</SelectItem>
                             <SelectItem value="consumable">
                               Consumable

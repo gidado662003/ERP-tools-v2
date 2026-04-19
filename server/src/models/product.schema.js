@@ -12,6 +12,19 @@ const productSchema = new mongoose.Schema(
       enum: ["draft", "awaiting_receipt", "received", "archived"],
       default: "draft",
     },
+    source: {
+      type: String,
+      enum: ["requisition", "manual"],
+      default: "requisition",
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    note: {
+      type: String,
+      default: "",
+    },
 
     trackIndividually: { type: Boolean, default: false },
   },

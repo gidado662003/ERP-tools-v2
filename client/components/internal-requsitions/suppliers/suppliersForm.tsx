@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 function SuppliersForm() {
   const [supplier, setSupplier] = useState({
@@ -77,8 +77,7 @@ function SuppliersForm() {
       <CardHeader>
         <CardTitle>Add New Supplier</CardTitle>
         <CardDescription>
-          Enter the supplier's details below to add them to your inventory
-          system.
+          Enter the supplier details below to add them to your inventory system.
         </CardDescription>
       </CardHeader>
 

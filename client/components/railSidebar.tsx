@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeftRight, ChevronRight, LucideIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useDisplayMode } from "@/lib/store";
 
-interface SubItems {
+interface SubItem {
   label: string;
   href: string;
 }
+
 interface NavItemConfig {
   href: string;
   label: string;
   icon: LucideIcon;
-  data?: SubItems[];
+  data?: SubItem[];
 }
 
 interface IconRailSidebarProps {
@@ -24,157 +29,222 @@ interface IconRailSidebarProps {
   switchLabel?: string;
 }
 
+interface DrawerState {
+  visible: boolean;
+  top: number;
+  label: string;
+  items: SubItem[];
+}
+
 function NavItem({
   href,
   data,
   label,
   icon: Icon,
   rootHref,
-  badgeColor,
-}: NavItemConfig & { rootHref: string; badgeColor: string }) {
+  onHover,
+  onLeave,
+}: NavItemConfig & {
+  rootHref: string;
+  onHover: (rect: DOMRect, label: string, items: SubItem[]) => void;
+  onLeave: () => void;
+}) {
   const pathname = usePathname();
+  const ref = useRef<HTMLDivElement>(null);
   const active =
     pathname === href || (href !== rootHref && pathname?.startsWith(href));
 
-  const hasSubItems = data && data.length > 0;
-
   return (
-    <div className="relative group/nav w-full">
+    <div
+      ref={ref}
+      className="relative w-full flex justify-center"
+      onMouseEnter={() => {
+        if (ref.current) {
+          onHover(ref.current.getBoundingClientRect(), label, data ?? []);
+        }
+      }}
+      onMouseLeave={onLeave}
+    >
       <Link
         href={href}
         className={[
-          "relative flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[10px] font-medium transition-all duration-150 w-full",
+          "relative flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-lg text-[8px] font-medium transition-colors duration-150",
           active
             ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
             : "text-muted-foreground hover:bg-accent hover:text-foreground",
         ].join(" ")}
       >
         {active && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r-full bg-blue-500" />
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-r-full bg-blue-500 -translate-x-[8px]" />
         )}
         <Icon
-          size={24}
-          className={[
-            "shrink-0 transition-transform w-[160px] duration-150 group-hover/nav:scale-110",
-            active ? "text-blue-500 dark:text-blue-400" : "",
-          ].join(" ")}
+          size={20}
+          className={active ? "text-blue-500 dark:text-blue-400" : ""}
         />
-        <span className="truncate text-[9px] text-center leading-none tracking-wide block w-full">
-          {label.split(" ").map((word, index) => (
-            <span key={index} className="block">
-              {word}
-            </span>
-          ))}
+        <span className="leading-none tracking-wide truncate max-w-full px-0.5">
+          {label.split(" ")[0].toLowerCase()}
         </span>
-
-        {/* Sub-items dot indicator */}
-        {hasSubItems && (
-          <span className="absolute top-2 right-2 h-1 w-1 rounded-full bg-blue-400/60" />
+        {data && data.length > 0 && (
+          <span className="absolute top-1.5 right-1.5 h-1 w-1 rounded-full bg-blue-300" />
         )}
       </Link>
-
-      {/* Hover drawer */}
-      {hasSubItems && (
-        <div
-          className={[
-            "absolute left-[calc(100%+10px)] top-0 z-[9999] min-w-[188px]",
-            "rounded-xl border border-border bg-card shadow-xl shadow-black/8",
-            "pointer-events-none opacity-0 -translate-x-2",
-            "group-hover/nav:pointer-events-auto group-hover/nav:opacity-100 group-hover/nav:translate-x-0",
-            "transition-all duration-200 ease-out",
-          ].join(" ")}
-        >
-          {/* Header */}
-          <div className="px-3 pt-3 pb-2 border-b border-border/60">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-              {label}
-            </p>
-          </div>
-
-          {/* Links */}
-          <div className="p-1.5 flex flex-col gap-0.5">
-            {data.map((subItem) => {
-              const subActive =
-                pathname === subItem.href || pathname?.startsWith(subItem.href);
-              return (
-                <Link
-                  key={subItem.href}
-                  href={subItem.href}
-                  className={[
-                    "flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
-                    subActive
-                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-500/10 dark:text-blue-400"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground",
-                  ].join(" ")}
-                >
-                  <span>{subItem.label}</span>
-                  <ChevronRight
-                    size={12}
-                    className={
-                      subActive ? "text-blue-400" : "text-muted-foreground/30"
-                    }
-                  />
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Arrow pointer */}
-          <div className="absolute -left-[5px] top-[14px] h-2.5 w-2.5 rotate-45 rounded-sm border-l border-b border-border bg-card" />
-        </div>
-      )}
     </div>
+  );
+}
+
+function HoverDrawer({
+  state,
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  state: DrawerState;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
+  const pathname = usePathname();
+
+  if (!state.visible || state.items.length === 0) return null;
+
+  return createPortal(
+    <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{ top: state.top, left: 64 }}
+      className="fixed z-[99999] w-[212px] bg-card border border-border rounded-xl overflow-hidden shadow-lg shadow-black/5"
+    >
+      <div className="px-3 pt-3 pb-2 border-b border-border/60">
+        <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
+          {state.label}
+        </p>
+      </div>
+      <div className="p-1.5 flex flex-col gap-0.5">
+        {state.items.map((item) => {
+          const active =
+            pathname === item.href || pathname?.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={[
+                "flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-[13px] transition-colors duration-100",
+                active
+                  ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-500/10 dark:text-blue-400"
+                  : "text-foreground/80 hover:bg-accent hover:text-foreground",
+              ].join(" ")}
+            >
+              <span>{item.label}</span>
+              <ChevronRight
+                size={11}
+                className={
+                  active ? "text-blue-400" : "text-muted-foreground/30"
+                }
+              />
+            </Link>
+          );
+        })}
+      </div>
+      <div className="absolute -left-[5px] top-[13px] h-2.5 w-2.5 rotate-45 rounded-sm border-l border-b border-border bg-card" />
+    </div>,
+    document.body,
   );
 }
 
 export default function IconRailSidebar({
   initials,
-  badgeColor = "bg-blue-500",
+  badgeColor = "bg-blue-600",
   items,
   rootHref,
   switchHref = "/",
   switchLabel = "Switch",
 }: IconRailSidebarProps) {
+  const toggleMode = useDisplayMode((state) => state.toggleMode);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [drawer, setDrawer] = useState<DrawerState>({
+    visible: false,
+    top: 0,
+    label: "",
+    items: [],
+  });
+
+  const scheduleHide = () => {
+    hideTimer.current = setTimeout(() => {
+      setDrawer((d) => ({ ...d, visible: false }));
+    }, 100);
+  };
+
+  const cancelHide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+  };
+
+  const handleHover = (rect: DOMRect, label: string, subItems: SubItem[]) => {
+    cancelHide();
+    setDrawer({
+      visible: true,
+      top: rect.top,
+      label,
+      items: subItems,
+    });
+  };
+
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    [],
+  );
+
   return (
-    <div className=" w-[80px] shrink-0 border-r border-gray-200 bg-card md:flex flex-col h-screen sticky top-0">
-      {/* Logo */}
-      <div className="flex h-14 items-center justify-center">
+    <>
+      <div className="w-14 shrink-0 border-r border-border bg-card hidden md:flex flex-col h-screen sticky top-0 items-center py-3 gap-1">
         <Link
           href={rootHref}
           className={[
-            "grid cursor-pointer h-9 w-9 place-items-center rounded-xl text-white font-bold text-xs tracking-widest shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-150 select-none",
+            "w-8 h-8 rounded-lg grid place-items-center text-white font-medium text-[10px] tracking-wider mb-3 hover:opacity-90 transition-opacity select-none",
             badgeColor,
           ].join(" ")}
         >
           {initials}
         </Link>
+
+        <div className="w-8 h-px bg-border mb-1" />
+
+        <nav className="flex-1 flex flex-col gap-0.5 w-full px-1.5">
+          {items.map((item) => (
+            <NavItem
+              key={item.href}
+              {...item}
+              rootHref={rootHref}
+              onHover={handleHover}
+              onLeave={scheduleHide}
+            />
+          ))}
+        </nav>
+
+        <div className="w-8 h-px bg-border mb-1" />
+
+        <div className="mb-1">
+          <Switch onChange={toggleMode} />
+        </div>
+
+        <footer>
+          <Link
+            href={switchHref}
+            className="flex flex-col items-center gap-1 w-9 h-9 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors group"
+          >
+            <ArrowLeftRight
+              size={13}
+              className="mt-2 transition-transform group-hover:scale-110"
+            />
+            <span className="tracking-wide leading-none">{switchLabel}</span>
+          </Link>
+        </footer>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5">
-        {items.map((item) => (
-          <NavItem
-            key={item.href}
-            {...item}
-            rootHref={rootHref}
-            badgeColor={badgeColor}
-          />
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 p-2">
-        <Link
-          href={switchHref}
-          className="flex flex-col items-center gap-1.5 w-full rounded-xl px-2 py-2.5 text-[10px] font-medium text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground group"
-        >
-          <ArrowLeftRight
-            size={15}
-            className="shrink-0 transition-transform duration-150 group-hover:scale-110"
-          />
-          <span className="tracking-wide">{switchLabel}</span>
-        </Link>
-      </footer>
-    </div>
+      <HoverDrawer
+        state={drawer}
+        onMouseEnter={cancelHide}
+        onMouseLeave={scheduleHide}
+      />
+    </>
   );
 }

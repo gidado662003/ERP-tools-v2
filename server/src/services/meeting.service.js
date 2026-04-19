@@ -100,4 +100,3 @@ async function createMeeting(payload) {
 }
 
 module.exports = { getMeetings, getMeetingById, createMeeting };
-

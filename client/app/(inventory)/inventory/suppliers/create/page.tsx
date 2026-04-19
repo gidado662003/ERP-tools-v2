@@ -1,5 +1,5 @@
 import React from "react";
-import SuppliersForm from "@/components/internal-requsitions/suppliers/suppliersList";
+import SuppliersForm from "@/components/internal-requsitions/suppliers/suppliersForm";
 function page() {
   return (
     <div>

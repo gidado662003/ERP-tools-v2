@@ -21,14 +21,12 @@ async function getSuppliers(search) {
         },
       },
     ]);
-    console.log("🚀 ~ getSuppliers ~ counts:", counts);
 
     const countMap = {};
 
     counts.forEach((c) => {
       countMap[c._id.toString()] = c.totalReceivedQuantity;
     });
-    console.log("🚀 ~ getSuppliers ~ countMap:", countMap);
 
     const suppliersWithCount = suppliers.map((supplier) => ({
       ...supplier,
@@ -47,6 +45,27 @@ async function addSupplier(supplierData) {
     await newSupplier.save();
     return newSupplier;
   } catch (error) {
+    console.error("Error adding supplier:", error);
+    throw error;
+  }
+}
+
+async function getProductsBySupplier(supplierId) {
+  try {
+    const products = await ProductBatch.find({ supplier: supplierId })
+      .populate("product", "name")
+      .populate("requisition")
+      .lean();
+    return products.map((p) => ({
+      productName: p.product.name,
+      batchNumber: p.batchNumber,
+      receivedQuantity: p.receivedQuantity,
+      receivedDate: p.receivedDate,
+      totalCost: p.requisition ? p.requisition.totalAmount : null,
+      dateAdded: p.createdAt,
+    }));
+  } catch (error) {
+    console.error("Error fetching products by supplier:", error);
     throw error;
   }
 }
@@ -54,4 +73,5 @@ async function addSupplier(supplierData) {
 module.exports = {
   getSuppliers,
   addSupplier,
+  getProductsBySupplier,
 };

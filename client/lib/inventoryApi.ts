@@ -143,4 +143,13 @@ export const inventoryAPI = {
     const res = await inventoryApi.get("/suppliers", { params });
     return res.data;
   },
+  createManualBatch: async (payload: {
+    productId: string;
+    expectedQuantity: number;
+    supplierId?: string;
+    location?: string;
+  }) => {
+    const res = await inventoryApi.post("/procurement-batches/manual", payload);
+    return res.data;
+  },
 };

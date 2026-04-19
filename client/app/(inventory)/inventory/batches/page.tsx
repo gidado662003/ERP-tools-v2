@@ -22,6 +22,7 @@ import { DataTable } from "@/components/dashboard/data-table";
 export default function BatchesPage() {
   const router = useRouter();
   const [batches, setBatches] = useState<ProcurementBatch[]>([]);
+  console.log("🚀 ~ BatchesPage ~ batches:", batches);
   const [loading, setLoading] = useState(true);
 
   const fetchBatches = async () => {
@@ -56,7 +57,7 @@ export default function BatchesPage() {
     { key: "received", label: "Received" },
     { key: "status", label: "Status" },
     { key: "location", label: "Location" },
-    { key: "requisition", label: "Requisition" },
+    { key: "supplier", label: "Supplier" },
   ];
   const tableRows = awaitingBatches.map((batch) => ({
     _id: batch._id,
@@ -68,6 +69,7 @@ export default function BatchesPage() {
         {batch.status.replace("_", " ")}
       </Badge>
     ),
+    supplier: batch.supplier?.name || "—",
     location: batch.location || "—",
   }));
 

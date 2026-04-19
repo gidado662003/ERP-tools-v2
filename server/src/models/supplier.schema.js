@@ -7,7 +7,13 @@ const supplierSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
-      uppercase: true, // enforces your standard
+      uppercase: true,
+    },
+
+    slug: {
+      type: String,
+      unique: true,
+      lowercase: true,
     },
 
     contactInfo: {
@@ -18,5 +24,16 @@ const supplierSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+supplierSchema.pre("save", async function () {
+  if (this.isModified("name")) {
+    const baseSlug = this.name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "");
+
+    this.slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
+  }
+});
 
 module.exports = mongoose.model("Supplier", supplierSchema);

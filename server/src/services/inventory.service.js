@@ -3,6 +3,7 @@ const Inventory = require("../models/inventory.schema");
 const Asset = require("../models/asset.schema");
 const ProcurementBatch = require("../models/productBatch.schema");
 const Supplier = require("../models/supplier.schema");
+const mongoose = require("mongoose");
 const InventoryMovement = require("../models/inventoryMovement.schema");
 
 async function createProductsFromRequest(request, session) {
@@ -57,6 +58,7 @@ async function getBatchProducts() {
     status: { $in: ["awaiting_receipt", "partially_received"] },
   })
     .populate("product")
+    .populate("supplier", "name")
     .populate("requisition");
   return batches;
 }
@@ -70,11 +72,7 @@ async function getBatchById(id) {
 }
 
 // Get batch by ID with product and requisition details, and process receiving the batch (update quantities, create assets if needed)
-async function getBatchProduct(
-  id,
-  quantity,
-  assetMetas = [],
-) {
+async function getBatchProduct(id, quantity, assetMetas = []) {
   const batch = await ProcurementBatch.findById(id).populate("product");
   if (!batch) throw new Error("Batch product not found");
 
@@ -155,11 +153,64 @@ async function getAssets() {
   return assets;
 }
 
+async function createManualProcurementBatch(data, user) {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const productName = data.productName.trim().toLowerCase();
+
+    let product = await Product.findOne({ name: productName }, null, {
+      session,
+    });
+
+    if (!product) {
+      [product] = await Product.create(
+        [
+          {
+            name: productName,
+            unit: data.unit || "pcs",
+            trackIndividually: data.type === "asset",
+          },
+        ],
+        { session },
+      );
+    }
+
+    const [batch] = await ProcurementBatch.create(
+      [
+        {
+          product: product._id,
+          requisition: null,
+          expectedQuantity: data.quantity,
+          status: "awaiting_receipt",
+          location: data.location,
+          supplier: data.supplier || null,
+          note: data.note || "",
+          createdBy: user._id,
+          source: "manual",
+        },
+      ],
+      { session },
+    );
+
+    await session.commitTransaction();
+    return batch;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+}
+
 module.exports = {
   getBatchProducts,
   getBatchById,
   getBatchProduct,
   createProductsFromRequest,
+  createManualProcurementBatch,
   getInventory,
   getAssets,
 };

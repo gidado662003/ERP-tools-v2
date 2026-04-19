@@ -1,11 +1,14 @@
 const {
   addSupplier,
   getSuppliers,
+  getProductsBySupplier,
 } = require("../../services/supplier.service");
 const supplierController = {
   addSupplierController: async (req, res) => {
     try {
+      console.log("🚀 ~ addSupplierController ~ req.body:", req.body);
       const newSupplier = await addSupplier(req.body);
+      console.log("🚀 ~ newSupplier:", newSupplier);
       res.status(201).json({
         message: "Supplier added successfully",
         supplier: newSupplier,
@@ -22,6 +25,16 @@ const supplierController = {
       res.status(200).json(suppliers);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch suppliers" });
+    }
+  },
+  getProductsBySupplierController: async (req, res) => {
+    const { supplierId } = req.params;
+    try {
+      const products = await getProductsBySupplier(supplierId);
+
+      res.status(200).json(products);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch products for supplier" });
     }
   },
 };
