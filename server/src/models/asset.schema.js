@@ -23,8 +23,8 @@ const assetSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["equipment", "consumable", "other"],
-      default: "equipment",
+      enum: ["cpe", "noc", "pop", "other"],
+      default: "cpe",
     },
 
     supplier: {

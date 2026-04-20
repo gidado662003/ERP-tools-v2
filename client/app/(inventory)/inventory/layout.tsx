@@ -47,7 +47,6 @@ function InventoryLayout({ children }: { children: React.ReactNode }) {
       data: [
         { label: "All Batches", href: "/inventory/batches" },
         { label: "New Batch", href: "/inventory/batches/create" },
-        { label: "Suppliers", href: "/inventory/batches/suppliers" },
       ],
     },
     {

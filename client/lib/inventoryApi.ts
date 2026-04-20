@@ -11,7 +11,7 @@ import type { AssetGroup } from "@/lib/inventoryTypes";
 type AssetMeta = {
   serialNumber: string;
   condition: "NEW" | "GOOD" | "FAIR" | "DAMAGED";
-  category: "equipment" | "consumable" | "other";
+  category: "pop" | "noc" | "cpe" | "other";
   ownership: "COMPANY" | "CUSTOMER";
   purchaseDate: string;
   notes: string;
@@ -119,6 +119,7 @@ export const inventoryAPI = {
       quantity: number;
       serialNumbers?: string[];
       assetMetas?: AssetMeta[];
+      category?: string;
     },
   ): Promise<ProcurementBatch> => {
     const res = await inventoryApi.post<ProcurementBatch>(
@@ -144,10 +145,13 @@ export const inventoryAPI = {
     return res.data;
   },
   createManualBatch: async (payload: {
-    productId: string;
-    expectedQuantity: number;
-    supplierId?: string;
+    productName: string;
+    type: "asset" | "inventory";
+    quantity: number;
+    unit: string;
+    supplier?: string;
     location?: string;
+    note?: string;
   }) => {
     const res = await inventoryApi.post("/procurement-batches/manual", payload);
     return res.data;

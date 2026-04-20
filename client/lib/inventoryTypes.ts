@@ -34,6 +34,7 @@ export type ProcurementBatch = {
   status: "awaiting_receipt" | "partially_received" | "received";
   location?: string;
   createdAt?: string;
+  supplier?: { _id: string; name: string } | null;
   updatedAt?: string;
 };
 
@@ -166,5 +167,5 @@ export interface Supplier {
   email: string;
   createdAt: string;
   updatedAt: string;
-  productsSupplied?: number;
+  itemsSupplied?: number;
 }

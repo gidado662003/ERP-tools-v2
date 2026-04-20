@@ -72,10 +72,9 @@ async function getBatchById(id) {
 }
 
 // Get batch by ID with product and requisition details, and process receiving the batch (update quantities, create assets if needed)
-async function getBatchProduct(id, quantity, assetMetas = []) {
+async function getBatchProduct(id, quantity, category, assetMetas = []) {
   const batch = await ProcurementBatch.findById(id).populate("product");
   if (!batch) throw new Error("Batch product not found");
-
   const remainingToReceive = batch.expectedQuantity - batch.receivedQuantity;
   if (quantity > remainingToReceive || quantity <= 0) {
     throw new Error(
@@ -105,11 +104,18 @@ async function getBatchProduct(id, quantity, assetMetas = []) {
   await batch.save();
 
   if (!batch.product.trackIndividually) {
+    const incomingCategory = category || "other";
     await Inventory.findOneAndUpdate(
       { product: batch.product._id },
       {
         $inc: { quantity },
-        $set: { location: batch.location, supplier: batch.supplier },
+        $set: {
+          location: batch.location,
+          supplier: batch.supplier,
+        },
+        $setOnInsert: {
+          category: incomingCategory, // only written on upsert insert, never overwritten
+        },
       },
       { upsert: true },
     );

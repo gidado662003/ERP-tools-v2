@@ -68,7 +68,7 @@ function NavItem({
       <Link
         href={href}
         className={[
-          "relative flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-lg text-[8px] font-medium transition-colors duration-150",
+          "relative flex flex-col  items-center justify-center gap-1 w-16 h-16 rounded-lg text-[9px] font-medium transition-colors duration-150",
           active
             ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
             : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -78,11 +78,11 @@ function NavItem({
           <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-r-full bg-blue-500 -translate-x-[8px]" />
         )}
         <Icon
-          size={20}
+          size={24}
           className={active ? "text-blue-500 dark:text-blue-400" : ""}
         />
         <span className="leading-none tracking-wide truncate max-w-full px-0.5">
-          {label.split(" ")[0].toLowerCase()}
+          {label.split(" ")[0].toUpperCase()}
         </span>
         {data && data.length > 0 && (
           <span className="absolute top-1.5 right-1.5 h-1 w-1 rounded-full bg-blue-300" />
@@ -195,7 +195,7 @@ export default function IconRailSidebar({
 
   return (
     <>
-      <div className="w-14 shrink-0 border-r border-border bg-card hidden md:flex flex-col h-screen sticky top-0 items-center py-3 gap-1">
+      <div className="w-16 shrink-0 border-r border-border bg-card hidden md:flex flex-col h-screen sticky top-0 items-center py-3 gap-1">
         <Link
           href={rootHref}
           className={[
@@ -223,7 +223,7 @@ export default function IconRailSidebar({
         <div className="w-8 h-px bg-border mb-1" />
 
         <div className="mb-1">
-          <Switch onChange={toggleMode} />
+          <Switch onClick={toggleMode} />
         </div>
 
         <footer>

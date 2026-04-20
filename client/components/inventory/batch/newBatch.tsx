@@ -45,9 +45,9 @@ function NewBatch({ onCancel }: { onCancel?: () => void }) {
       await inventoryAPI.createManualBatch({
         productName: form.productName,
         type: form.type,
-        unit: form.unit,
         quantity: Number(form.quantity),
-        supplier: form.supplier?._id ?? null,
+        unit: form.unit,
+        supplier: form.supplier?._id ?? "",
         location: form.location,
         note: form.note,
       });

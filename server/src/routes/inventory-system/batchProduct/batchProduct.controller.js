@@ -26,11 +26,13 @@ const batchProductController = {
   },
   reciveProduct: async (req, res) => {
     try {
-      console.log("🚀 ~ getBatchProduct ~ req.Id:", req.params.id);
-      const { quantity, assetMetas, performedBy } = req.body;
+      console.log("body", req.body);
+      const { quantity, category, assetMetas, performedBy } = req.body;
+      console.log("🚀 ~ category:", category);
       const batchProduct = await getBatchProduct(
         req.params.id,
         quantity,
+        category,
         assetMetas ?? [],
         performedBy ||
           (req.user && { name: req.user.name, email: req.user.email }),
