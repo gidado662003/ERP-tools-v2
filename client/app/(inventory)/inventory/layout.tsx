@@ -7,6 +7,7 @@ import {
   Package,
   Tag,
   PackageCheck,
+  PackageSearch,
   Building2,
   ArrowLeftRight,
 } from "lucide-react";
@@ -67,6 +68,15 @@ function InventoryLayout({ children }: { children: React.ReactNode }) {
       data: [
         { label: "All Suppliers", href: "/inventory/suppliers" },
         { label: "Add Supplier", href: "/inventory/suppliers/create" },
+      ],
+    },
+    {
+      href: "/inventory/material-request",
+      label: "Material Requests",
+      icon: PackageSearch,
+      data: [
+        { label: "All Requests", href: "/inventory/material-request" },
+        { label: "New Request", href: "/inventory/material-request/create" },
       ],
     },
   ];
