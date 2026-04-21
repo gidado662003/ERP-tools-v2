@@ -1,5 +1,3 @@
-export interface MaterialRequest {}
-
 export type StockItem = {
   _id: string;
   product: { _id: string; name: string; unit: string };
@@ -8,11 +6,42 @@ export type StockItem = {
 };
 
 export type RequestLine = {
-  inventory: string;
-  product: string;
-  productName: string;
+  inventory: {
+    _id: string;
+    name: string;
+    unit: string;
+    location?: string;
+    quantity?: number;
+  };
+  product: { _id: string; name: string };
+  productName?: string;
   unit: string;
-  availableQty: number;
-  location: string;
+  availableQty?: number;
+  location?: string;
   quantity: number;
+};
+
+export type MaterialRequest = {
+  _id: string;
+  requestNumber: string;
+  reason: string;
+  description?: string;
+  items: RequestLine[];
+  status: "PENDING" | "APPROVED" | "REJECTED" | "DISPATCHED";
+  createdAt: string;
+  updatedAt: string;
+  requestedBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  approvedBy?: {
+    _id: string;
+
+    name: string;
+  };
+  fulfilledBy?: {
+    _id: string;
+    name: string;
+  };
 };

@@ -40,7 +40,7 @@ export function DataTable({
   actions,
 }: DataTableProps) {
   return (
-    <div className="bg-white dark:bg-gray-900 border border-[#e0dfe8] dark:border-gray-700 rounded-md overflow-hidden">
+    <div className="bg-white dark:bg-[#0a0a0a] border border-[#e0dfe8] dark:border-gray-700 rounded-md overflow-hidden">
       <div className="px-4 py-3 border-b border-[#e0dfe8] dark:border-gray-700">
         <p className="text-xs font-medium text-[#80708f] dark:text-gray-400 uppercase tracking-wide">
           {title}
@@ -85,7 +85,7 @@ export function DataTable({
                     {actions.map((items, index) => {
                       const Icon = items.icon;
                       return (
-                        <Tooltip>
+                        <Tooltip key={index}>
                           <TooltipTrigger>
                             <button
                               key={index}

@@ -12,10 +12,15 @@ const materialRequestController = {
 
   getMaterialRequestById: async (req, res) => {
     try {
+      console.log(
+        "🚀 ~ getMaterialRequestById ~ req.params.id:",
+        req.params.id,
+      );
       const materialRequest =
         await MaterialRequestService.getMaterialRequestById(req.params.id);
       res.json(materialRequest);
     } catch (error) {
+      console.error("Error fetching material request:", error);
       res.status(500).json({ message: error.message });
     }
   },
@@ -31,16 +36,41 @@ const materialRequestController = {
     }
   },
 
-  updateMaterialRequest: async (req, res) => {
+  approveRequest: async (req, res) => {
     try {
-      const materialRequest =
-        await MaterialRequestService.updateMaterialRequest(
-          req.params.id,
-          req.body,
-        );
-      if (!materialRequest) {
-        return res.status(404).json({ message: "Material request not found" });
-      }
+      const user = req.user;
+      const materialRequest = await MaterialRequestService.approveRequest(
+        req.params.id,
+        user,
+      );
+
+      res.json(materialRequest);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+  rejectRequest: async (req, res) => {
+    try {
+      const user = req.user;
+      const materialRequest = await MaterialRequestService.rejectRequest(
+        req.params.id,
+        user,
+        req.body.comment,
+      );
+
+      res.json(materialRequest);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+  dispatchRequest: async (req, res) => {
+    try {
+      const user = req.user;
+      const materialRequest = await MaterialRequestService.dispatchRequest(
+        req.params.id,
+        user,
+      );
+
       res.json(materialRequest);
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -51,49 +81,6 @@ const materialRequestController = {
     try {
       const materialRequest =
         await MaterialRequestService.deleteMaterialRequest(req.params.id);
-      if (!materialRequest) {
-        return res.status(404).json({ message: "Material request not found" });
-      }
-      res.json({ message: "Material request deleted successfully" });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
-  getMaterialRequestById: async (req, res) => {
-    try {
-      const materialRequest = await MaterialRequest.findById(req.params.id)
-        .populate("items.inventory")
-        .populate("items.product");
-      if (!materialRequest) {
-        return res.status(404).json({ message: "Material request not found" });
-      }
-      res.json(materialRequest);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
-  updateMaterialRequest: async (req, res) => {
-    try {
-      const materialRequest = await MaterialRequest.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        { new: true },
-      )
-        .populate("items.inventory")
-        .populate("items.product");
-      if (!materialRequest) {
-        return res.status(404).json({ message: "Material request not found" });
-      }
-      res.json(materialRequest);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  },
-  deleteMaterialRequest: async (req, res) => {
-    try {
-      const materialRequest = await MaterialRequest.findByIdAndDelete(
-        req.params.id,
-      );
       if (!materialRequest) {
         return res.status(404).json({ message: "Material request not found" });
       }

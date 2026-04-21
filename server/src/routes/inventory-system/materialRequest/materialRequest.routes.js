@@ -8,7 +8,9 @@ router.get("/:id", materialRequestController.getMaterialRequestById);
 
 router.post("/create", materialRequestController.createMaterialRequest);
 
-router.put("/:id", materialRequestController.updateMaterialRequest);
+router.patch("/:id/approve", materialRequestController.approveRequest);
+router.patch("/:id/reject", materialRequestController.rejectRequest);
+router.patch("/:id/dispatch", materialRequestController.dispatchRequest);
 
 router.delete("/:id", materialRequestController.deleteMaterialRequest);
 

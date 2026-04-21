@@ -20,10 +20,8 @@ import {
   MapPin,
   AlertTriangle,
 } from "lucide-react";
-import {
-  StockItem,
-  RequestLine,
-} from "@/lib/material-request/material-requestTypes";
+import { RequestLine } from "@/lib/material-request/material-requestType";
+import { InventoryItem } from "@/lib/inventoryTypes";
 import { toast } from "sonner";
 
 export default function CreateRequest() {
@@ -33,7 +31,7 @@ export default function CreateRequest() {
   const [lines, setLines] = useState<RequestLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const [stockItems, setStockItems] = useState<StockItem[]>([]);
+  const [InventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [stockLoading, setStockLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
@@ -42,7 +40,7 @@ export default function CreateRequest() {
   useEffect(() => {
     inventoryAPI
       .getInventory()
-      .then(setStockItems)
+      .then(setInventoryItems)
       .catch(() => toast.error("Failed to load stock"))
       .finally(() => setStockLoading(false));
   }, []);
@@ -51,13 +49,13 @@ export default function CreateRequest() {
     if (panelOpen) setTimeout(() => searchRef.current?.focus(), 60);
   }, [panelOpen]);
 
-  const filtered = stockItems.filter((s) =>
+  const filtered = InventoryItems.filter((s) =>
     s.product.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   const isAdded = (id: string) => lines.some((l) => l.inventory === id);
 
-  const addLine = (item: StockItem) => {
+  const addLine = (item: InventoryItem) => {
     if (isAdded(item._id)) {
       toast.info(`${item.product.name} already added`);
       return;
@@ -86,7 +84,10 @@ export default function CreateRequest() {
       const next = [...prev];
       next[i] = {
         ...next[i],
-        quantity: Math.max(1, Math.min(val || 1, next[i].availableQty)),
+        quantity: Math.max(
+          1,
+          Math.min(val || 1, next[i].availableQty as number),
+        ),
       };
       return next;
     });
@@ -114,7 +115,7 @@ export default function CreateRequest() {
         })),
       });
       toast.success("Request submitted");
-      router.push("/inventory/material-requests");
+      router.push("/inventory/material-request");
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       toast.error(error?.response?.data?.error ?? "Failed to submit");
@@ -124,7 +125,7 @@ export default function CreateRequest() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 space-y-6">
+    <div className=" mx-auto  space-y-6">
       {/* ── Header ── */}
       <div className="flex items-center justify-between pb-4 border-b">
         <div className="flex items-center gap-3">
@@ -276,7 +277,7 @@ export default function CreateRequest() {
               <PackageSearch className="h-6 w-6 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">No items added</p>
               <p className="text-xs text-muted-foreground/70">
-                Use "Add Item" to pick from stock
+                Use Add Item to pick from stock
               </p>
             </div>
           ) : (
@@ -342,6 +343,9 @@ export default function CreateRequest() {
             <CardHeader className="py-3 px-4 border-b bg-muted/40">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Reason <span className="text-destructive">*</span>
+                <p className="text-[5px] text-muted-foreground mt-1">
+                  Please provide a brief explanation for this material request.
+                </p>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">

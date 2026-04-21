@@ -26,6 +26,7 @@ import {
   Package,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { InventoryItem } from "@/lib/inventoryTypes";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -38,31 +39,33 @@ export type StockCategory =
   | "tool"
   | "other";
 
-export type StockItem = {
-  _id: string;
-  product: {
-    _id: string;
-    name: string;
-    unit: string;
-    // suggested additions:
-    // sku: string;
-    // description: string;
-    // imageUrl: string;
-  };
-  category: StockCategory;
-  quantity: number;
-  location: string;
-  supplier: string | null;
-  lastUpdated: string;
-  // suggested additions:
-  // reorderPoint: number;       — threshold to flag low stock
-  // reorderQuantity: number;    — how much to reorder
-  // unitCost: number;           — for stock valuation
-  // totalValue: number;         — quantity * unitCost (computed)
-  // warehouseZone: string;      — shelf/bin location within a warehouse
-  // lastReceivedAt: string;     — last batch received date
-  // lastDispatchedAt: string;   — last time stock was consumed/dispatched
-};
+// Lateef get back to this heheeh////////////////////////////////////////////
+
+// export type InventoryItem  = {
+//   _id: string;
+//   product: {
+//     _id: string;
+//     name: string;
+//     unit: string;
+//     // suggested additions:
+//     // sku: string;
+//     // description: string;
+//     // imageUrl: string;
+//   };
+//   category: StockCategory;
+//   quantity: number;
+//   location: string;
+//   supplier: string | null;
+//   lastUpdated: string;
+//   // suggested additions:
+//   // reorderPoint: number;       — threshold to flag low stock
+//   // reorderQuantity: number;    — how much to reorder
+//   // unitCost: number;           — for stock valuation
+//   // totalValue: number;         — quantity * unitCost (computed)
+//   // warehouseZone: string;      — shelf/bin location within a warehouse
+//   // lastReceivedAt: string;     — last batch received date
+//   // lastDispatchedAt: string;   — last time stock was consumed/dispatched
+// };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -86,14 +89,13 @@ const CATEGORY_COLORS: Record<StockCategory, string> = {
   other: "bg-zinc-50 text-zinc-600 border-zinc-200",
 };
 
-// Low stock threshold — ideally this comes from reorderPoint on the item
 const LOW_STOCK_THRESHOLD = 5;
 
-function isLowStock(item: StockItem) {
+function isLowStock(item: InventoryItem ) {
   return item.quantity <= LOW_STOCK_THRESHOLD;
 }
 
-function QuantityCell({ item }: { item: StockItem }) {
+function QuantityCell({ item }: { item: InventoryItem  }) {
   const low = isLowStock(item);
 
   return (
@@ -111,7 +113,7 @@ function QuantityCell({ item }: { item: StockItem }) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-function StockList({ inventoryData }: { inventoryData: StockItem[] }) {
+function StockList({ inventoryData }: { inventoryData: InventoryItem [] }) {
   const router = useRouter();
   if (!inventoryData?.length) {
     return (

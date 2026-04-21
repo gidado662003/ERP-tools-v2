@@ -16,12 +16,21 @@ export type EmployeeDTO = {
     name: string;
   };
 };
+export type InventoryCategory =
+  | "equipment"
+  | "consumable"
+  | "pop"
+  | "noc"
+  | "cpe"
+  | "tool"
+  | "other";
 
 export type InventoryItem = {
   _id: string;
-  product: Product;
+  product: { _id: string; name: string; unit: string };
   quantity: number;
   location: string;
+  category: InventoryCategory;
   lastUpdated: string;
 };
 
