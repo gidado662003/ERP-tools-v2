@@ -150,7 +150,9 @@ async function getBatchProduct(id, quantity, category, assetMetas = []) {
 }
 
 async function getInventory() {
-  const inventory = await Inventory.find().populate("product");
+  const inventory = await Inventory.find()
+    .populate("product", "name unit")
+    .lean();
   return inventory;
 }
 
@@ -211,6 +213,20 @@ async function createManualProcurementBatch(data, user) {
   }
 }
 
+async function transferStock(payload) {
+  const { id, toLocation } = payload;
+
+  const stock = await Inventory.findByIdAndUpdate(
+    id,
+    { $set: { location: toLocation, lastUpdated: new Date() } },
+    { new: true },
+  ).populate("product");
+  if (!stock) {
+    throw new Error("Inventory item not found");
+  }
+  return stock;
+}
+
 module.exports = {
   getBatchProducts,
   getBatchById,
@@ -219,4 +235,5 @@ module.exports = {
   createManualProcurementBatch,
   getInventory,
   getAssets,
+  transferStock,
 };

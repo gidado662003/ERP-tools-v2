@@ -1,7 +1,7 @@
 "use client";
 import InternalRequisitionSidebar from "@/components/internal-requsitions/internal-requsition-sidebar";
 import Link from "next/link";
-import { LayoutDashboard, Users, Plus } from "lucide-react";
+import { LayoutDashboard, Users, Plus, Toolbox } from "lucide-react";
 import IconRailSidebar from "@/components/railSidebar";
 
 const items = [

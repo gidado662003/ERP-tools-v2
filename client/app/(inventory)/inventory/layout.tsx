@@ -21,13 +21,13 @@ function InventoryLayout({ children }: { children: React.ReactNode }) {
       icon: LayoutDashboard,
     },
     {
-      href: "/inventory/stock-list",
+      href: "/inventory/stock",
       label: "Stock",
       icon: Package,
       data: [
-        { label: "All Stocks", href: "/inventory/stock-list" },
-        { label: "Add Stock", href: "/inventory/stock-list/create" },
-        { label: "Categories", href: "/inventory/stock-list/categories" },
+        { label: "All Stocks", href: "/inventory/stock" },
+        { label: "Add Stock", href: "/inventory/stock/create" },
+        { label: "Categories", href: "/inventory/stock/categories" },
       ],
     },
     {

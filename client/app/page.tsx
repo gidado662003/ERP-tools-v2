@@ -14,6 +14,7 @@ import {
   Bell,
   Search,
   Grid3X3,
+  Toolbox,
 } from "lucide-react";
 import { useModuleStore } from "../lib/moduleStore";
 import { useDisplayMode } from "@/lib/store";
@@ -42,6 +43,18 @@ const apps = [
     accent: "#10B981",
     accentLight: "#D1FAE5",
     accentDark: "#064e3b",
+    tag: "Operations",
+    featured: true,
+  },
+  {
+    name: "Operations",
+    description: "Manage jobs, material requests and field operations",
+    icon: Toolbox,
+    href: "/operations/",
+    module: "operations",
+    accent: "#b34848",
+    accentLight: "#fde8e8",
+    accentDark: "#3b0a0a",
     tag: "Operations",
     featured: true,
   },
@@ -160,7 +173,7 @@ function HomePage() {
           />
         </div>
 
-        <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+        <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-4 lg:grid-cols-4">
           {featured.map((app, i) => {
             const Icon = app.icon;
             return (
