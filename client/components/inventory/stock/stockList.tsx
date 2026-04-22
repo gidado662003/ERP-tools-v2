@@ -1,23 +1,9 @@
 "use client";
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   MapPin,
   MoreHorizontal,
@@ -27,8 +13,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { InventoryItem } from "@/lib/inventoryTypes";
-
-// ── Types ──────────────────────────────────────────────────────────────────
+import { DataTable } from "@/components/dashboard/data-table";
 
 export type StockCategory =
   | "equipment"
@@ -38,36 +23,6 @@ export type StockCategory =
   | "cpe"
   | "tool"
   | "other";
-
-// Lateef get back to this heheeh////////////////////////////////////////////
-
-// export type InventoryItem  = {
-//   _id: string;
-//   product: {
-//     _id: string;
-//     name: string;
-//     unit: string;
-//     // suggested additions:
-//     // sku: string;
-//     // description: string;
-//     // imageUrl: string;
-//   };
-//   category: StockCategory;
-//   quantity: number;
-//   location: string;
-//   supplier: string | null;
-//   lastUpdated: string;
-//   // suggested additions:
-//   // reorderPoint: number;       — threshold to flag low stock
-//   // reorderQuantity: number;    — how much to reorder
-//   // unitCost: number;           — for stock valuation
-//   // totalValue: number;         — quantity * unitCost (computed)
-//   // warehouseZone: string;      — shelf/bin location within a warehouse
-//   // lastReceivedAt: string;     — last batch received date
-//   // lastDispatchedAt: string;   — last time stock was consumed/dispatched
-// };
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<StockCategory, string> = {
   equipment: "Equipment",
@@ -91,11 +46,11 @@ const CATEGORY_COLORS: Record<StockCategory, string> = {
 
 const LOW_STOCK_THRESHOLD = 5;
 
-function isLowStock(item: InventoryItem ) {
+function isLowStock(item: InventoryItem) {
   return item.quantity <= LOW_STOCK_THRESHOLD;
 }
 
-function QuantityCell({ item }: { item: InventoryItem  }) {
+function QuantityCell({ item }: { item: InventoryItem }) {
   const low = isLowStock(item);
 
   return (
@@ -113,7 +68,7 @@ function QuantityCell({ item }: { item: InventoryItem  }) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-function StockList({ inventoryData }: { inventoryData: InventoryItem [] }) {
+function StockList({ inventoryData }: { inventoryData: InventoryItem[] }) {
   const router = useRouter();
   if (!inventoryData?.length) {
     return (
@@ -130,6 +85,66 @@ function StockList({ inventoryData }: { inventoryData: InventoryItem [] }) {
   }
 
   const lowStockCount = inventoryData.filter(isLowStock).length;
+
+  const rows = inventoryData.map((item) => ({
+    id: item._id,
+    product: (
+      <div>
+        <p className="font-medium leading-tight">{item.product.name}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+          {item.product._id.slice(-8).toUpperCase()}
+        </p>
+      </div>
+    ),
+    category: (
+      <span
+        className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+          CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.other
+        }`}
+      >
+        {CATEGORY_LABELS[item.category] ?? item.category}
+      </span>
+    ),
+    quantity: <QuantityCell item={item} />,
+    location: (
+      <div className="flex items-center gap-1 text-muted-foreground">
+        <MapPin className="h-3 w-3 shrink-0" />
+        <span className="text-xs">{item.location}</span>
+      </div>
+    ),
+    lastUpdated: formatDistanceToNow(new Date(item.lastUpdated), {
+      addSuffix: true,
+    }),
+  }));
+  const columns = [
+    { key: "product", label: "Product" },
+    { key: "category", label: "Category" },
+    { key: "quantity", label: "Quantity" },
+    { key: "location", label: "Location" },
+    { key: "lastUpdated", label: "Last Updated" },
+  ];
+  const actions = [
+    {
+      label: "View Details",
+      task: (id: string) => router.push(`/inventory/stock/${id}`),
+      icon: MoreHorizontal,
+      color: "text-gray-600 hover:text-gray-900",
+    },
+    {
+      label: "Adjust Quantity",
+      task: (id: string) =>
+        router.push(`/inventory/stock/${id}/adjust-quantity`),
+      icon: ArrowUpDown,
+      color: "text-green-600 hover:text-green-900",
+    },
+    {
+      label: "Transfer Location",
+      task: (id: string) =>
+        router.push(`/inventory/stock/${id}/transfer-location`),
+      icon: MapPin,
+      color: "text-blue-600 hover:text-blue-900",
+    },
+  ];
 
   return (
     <div className="space-y-3">
@@ -149,122 +164,16 @@ function StockList({ inventoryData }: { inventoryData: InventoryItem [] }) {
 
       {/* ── Table ── */}
       <div className="border rounded-md overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[260px]">
-                Product
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Category
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  Quantity
-                  <ArrowUpDown className="h-3 w-3" />
-                </div>
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Location
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Last Updated
-              </TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {inventoryData.map((item) => (
-              <TableRow
-                key={item._id}
-                className={`text-sm ${isLowStock(item) ? "bg-amber-50/40 hover:bg-amber-50/60" : ""}`}
-              >
-                <TableCell>
-                  <div>
-                    <p className="font-medium leading-tight">
-                      {item.product.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-                      {item.product._id.slice(-8).toUpperCase()}
-                    </p>
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <span
-                    className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                      CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.other
-                    }`}
-                  >
-                    {CATEGORY_LABELS[item.category] ?? item.category}
-                  </span>
-                </TableCell>
-
-                <TableCell>
-                  <QuantityCell item={item} />
-                </TableCell>
-
-                <TableCell>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    <span className="text-xs">{item.location}</span>
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(item.lastUpdated), {
-                      addSuffix: true,
-                    })}
-                  </span>
-                </TableCell>
-
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="text-sm">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(`/inventory/stock/${item._id}`)
-                        }
-                      >
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(
-                            `/inventory/stock/${item._id}/adjust-quantity`,
-                          )
-                        }
-                      >
-                        Adjust Quantity
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(
-                            `/inventory/stock/${item._id}/transfer-location`,
-                          )
-                        }
-                      >
-                        Transfer Location
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <DataTable
+          title="Stock Inventory"
+          columns={columns}
+          rows={rows}
+          actions={actions}
+        />
       </div>
     </div>
   );
 }
-
-// ── Stat strip helper ──────────────────────────────────────────────────────
 
 function Stat({
   label,

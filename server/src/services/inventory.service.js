@@ -106,19 +106,19 @@ async function getBatchProduct(id, quantity, category, assetMetas = []) {
   if (!batch.product.trackIndividually) {
     const incomingCategory = category || "other";
     await Inventory.findOneAndUpdate(
-      { product: batch.product._id },
+      {
+        product: batch.product._id,
+        location: batch.location,
+      },
       {
         $inc: { quantity },
-        $set: {
-          location: batch.location,
-          supplier: batch.supplier,
-        },
         $setOnInsert: {
-          category: incomingCategory, // only written on upsert insert, never overwritten
+          category: incomingCategory,
         },
       },
-      { upsert: true },
+      { upsert: true, runValidators: true },
     );
+
     await Supplier.findByIdAndUpdate(batch.supplier, {
       $addToSet: { suppliedProducts: batch.product._id },
     });
@@ -153,6 +153,7 @@ async function getInventory() {
   const inventory = await Inventory.find()
     .populate("product", "name unit")
     .lean();
+  console.log("🚀 ~ getInventory ~ inventory:", inventory);
   return inventory;
 }
 
