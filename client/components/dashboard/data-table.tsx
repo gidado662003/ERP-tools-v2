@@ -12,6 +12,13 @@ export type TableColumn = {
   className?: string;
 };
 
+export type ButtonAction = {
+  label: string;
+  onClick: (row: any) => void;
+  color?: string;
+  disabled?: boolean;
+};
+
 export type TableRowData = {
   [key: string]: React.ReactNode;
 };
@@ -29,6 +36,7 @@ export interface DataTableProps {
   striped?: boolean;
   title: string;
   actions?: Action[];
+  buttonActions?: ButtonAction[];
 }
 
 export function DataTable({
@@ -38,6 +46,7 @@ export function DataTable({
   emptyMessage = "No data available",
   striped = false,
   actions,
+  buttonActions,
 }: DataTableProps) {
   return (
     <div className="bg-white dark:bg-[#0a0a0a] border border-[#e0dfe8] dark:border-gray-700 rounded-md overflow-hidden">
@@ -94,7 +103,7 @@ export function DataTable({
                                 items.task(row._id);
                               }}
                             >
-                              <Icon size={13} strokeWidth={1.8} />
+                              <Icon size={16} strokeWidth={1.8} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -110,6 +119,22 @@ export function DataTable({
           ))}
         </tbody>
       </table>
+      <div>
+        {buttonActions && (
+          <div className="flex items-center justify-end gap-2 p-4 mt-3">
+            {buttonActions.map((action, index) => (
+              <Button
+                key={index}
+                disabled={action.disabled}
+                onClick={action.onClick}
+                className={`px-3 py-1.5 ${action.disabled ? "opacity-50 cursor-not-allowed" : ""}  text-xs font-medium transition-colors ${action.color ?? "bg-indigo-600 text-white "}`}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

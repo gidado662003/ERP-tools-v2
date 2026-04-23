@@ -1,5 +1,8 @@
 import axios from "axios";
-import { MaterialRequest } from "./material-requestType";
+import {
+  MaterialRequest,
+  MaterialRequestResponse,
+} from "./material-requestType";
 import { RequestLine } from "./material-requestType";
 export const adminApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api",
@@ -10,20 +13,34 @@ export const adminApi = axios.create({
 });
 
 export const materialRequestAPI = {
-  getMaterialRequests: async () => {
-    const res = await adminApi.get("/material-requests");
-    return res.data as MaterialRequest[];
+  getMaterialRequests: async ({
+    status,
+    search,
+    cursor,
+  }: {
+    status?: string;
+    search?: string;
+    cursor?: string;
+  }) => {
+    const res = await adminApi.get("/material-requests", {
+      params: {
+        status: status ?? undefined,
+        search: search ?? undefined,
+        cursor: cursor ?? undefined,
+      },
+    });
+    return res.data as MaterialRequestResponse;
   },
   createMaterialRequest: async (payload: {
     reason: string;
-    items: RequestLine[];
+    items: { inventory: string; product: string; quantity: number }[];
   }) => {
     const res = await adminApi.post("/material-requests/create", payload);
-    return res.data as MaterialRequest;
+    return res.data;
   },
   getMaterialRequestById: async (id: string) => {
     const res = await adminApi.get(`/material-requests/${id}`);
-    return res.data as MaterialRequest;
+    return res.data;
   },
   approveRequestStatus: async (id: string) => {
     const res = await adminApi.patch(`/material-requests/${id}/approve`);

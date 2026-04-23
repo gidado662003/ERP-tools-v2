@@ -2,20 +2,18 @@ const MaterialRequestService = require("./materialRequest.service");
 const materialRequestController = {
   getMaterialRequests: async (req, res) => {
     try {
-      const materialRequests =
-        await MaterialRequestService.getMaterialRequests();
+      const materialRequests = await MaterialRequestService.getMaterialRequests(
+        req.query,
+      );
       res.json(materialRequests);
     } catch (error) {
+      console.error("Error fetching material requests:", error);
       res.status(500).json({ message: error.message });
     }
   },
 
   getMaterialRequestById: async (req, res) => {
     try {
-      console.log(
-        "🚀 ~ getMaterialRequestById ~ req.params.id:",
-        req.params.id,
-      );
       const materialRequest =
         await MaterialRequestService.getMaterialRequestById(req.params.id);
       res.json(materialRequest);

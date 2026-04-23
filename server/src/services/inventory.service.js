@@ -59,7 +59,10 @@ async function getBatchProducts() {
   })
     .populate("product")
     .populate("supplier", "name")
-    .populate("requisition");
+    .populate("requisition")
+    .limit(20)
+    .sort({ createdAt: -1 })
+    .lean();
   return batches;
 }
 

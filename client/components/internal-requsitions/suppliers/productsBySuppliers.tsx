@@ -48,7 +48,7 @@ function ProductsBySuppliers({ products }: { products: any[] }) {
               <div>
                 <p className="text-[11px] text-gray-400">Total cost</p>
                 <p className="text-sm font-medium text-gray-900">
-                  ₦{product.totalCost.toLocaleString()}
+                  {/* ₦{product.totalCost.toLocaleString()} */}
                 </p>
               </div>
               <div>

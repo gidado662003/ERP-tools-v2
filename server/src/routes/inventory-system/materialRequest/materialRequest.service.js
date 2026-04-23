@@ -6,10 +6,43 @@ const getUserInfo = (user) => ({
   userId: user._id ?? user.id,
 });
 const MaterialRequestService = {
-  getMaterialRequests: async () => {
-    return await MaterialRequest.find()
+  getMaterialRequests: async (params) => {
+    const { status, search, cursor } = params;
+    const query = {};
+    const limit = 20;
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { requestNumber: { $regex: search, $options: "i" } },
+        { reason: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (cursor) {
+      query._id = { $lt: cursor };
+    }
+
+    const data = await MaterialRequest.find(query)
       .populate("items.inventory")
-      .populate("items.product");
+      .populate("items.product")
+      .sort({ _id: -1 })
+      .limit(limit + 1);
+
+    const hasNextPage = data.length > limit;
+    if (hasNextPage) {
+      data.pop();
+    }
+    let lastItemId = null;
+
+    if (data.length > 0) {
+      lastItemId = data[data.length - 1]._id;
+    }
+
+    return { data, hasNextPage, lastItemId };
   },
 
   getMaterialRequestById: async (id) => {
@@ -89,7 +122,6 @@ const MaterialRequestService = {
       throw new Error("Only approved requests can be dispatched");
     }
 
-    // 🔥 Inventory check + deduction
     for (const item of request.items) {
       const inventory = item.inventory;
 

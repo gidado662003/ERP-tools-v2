@@ -1,9 +1,7 @@
 "use client";
 
 import React from "react";
-
 import { useRouter } from "next/navigation";
-
 import {
   MapPin,
   MoreHorizontal,
@@ -65,8 +63,6 @@ function QuantityCell({ item }: { item: InventoryItem }) {
     </div>
   );
 }
-
-// ── Component ──────────────────────────────────────────────────────────────
 
 function StockList({ inventoryData }: { inventoryData: InventoryItem[] }) {
   const router = useRouter();

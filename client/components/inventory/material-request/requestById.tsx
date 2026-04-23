@@ -1,6 +1,9 @@
 "use client";
 import React, { useState } from "react";
-import { MaterialRequest } from "@/lib/material-request/material-requestType";
+import {
+  MaterialRequest,
+  PopulatedMaterialRequest,
+} from "@/lib/material-request/material-requestType";
 import { materialRequestAPI } from "@/lib/material-request/material-requestApi";
 import { Button } from "@/components/ui/button";
 
@@ -58,7 +61,7 @@ function RejectModal({
 }
 
 // ── Main Component
-function RequestById({ data }: { data: MaterialRequest }) {
+function RequestById({ data }: { data: PopulatedMaterialRequest }) {
   const [status, setStatus] = useState(data.status);
   const [loading, setLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
