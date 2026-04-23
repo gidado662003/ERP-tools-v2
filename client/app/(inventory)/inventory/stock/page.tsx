@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { inventoryAPI } from "@/lib/inventoryApi";
 import StockList from "@/components/inventory/stock/stockList";
 export default async function InventoryItemListPage() {
