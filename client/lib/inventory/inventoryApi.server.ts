@@ -8,7 +8,7 @@ import type {
   AssetGroup,
 } from "@/lib/inventoryTypes";
 
-import type { Supplier } from "@/components/internal-requsitions/suppliers/supplierList";
+import { Supplier } from "@/components/internal-requsitions/suppliers/supplierList";
 
 // Direct to backend — bypasses Apache/public IP entirely
 const SERVER_API_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:5001/api";
