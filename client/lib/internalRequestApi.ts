@@ -134,7 +134,6 @@ export const internalRequestAPI = {
   }: {
     dateRange: { startDate: string; endDate: string };
   }) => {
-    console.log("🚀 ~ dateRange:", dateRange);
     try {
       const res = await requestApi.get("/internalrequest/dashboard/metrics", {
         params: {

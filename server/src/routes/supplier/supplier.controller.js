@@ -6,9 +6,7 @@ const {
 const supplierController = {
   addSupplierController: async (req, res) => {
     try {
-      console.log("🚀 ~ addSupplierController ~ req.body:", req.body);
       const newSupplier = await addSupplier(req.body);
-      console.log("🚀 ~ newSupplier:", newSupplier);
       res.status(201).json({
         message: "Supplier added successfully",
         supplier: newSupplier,

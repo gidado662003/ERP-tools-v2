@@ -22,7 +22,6 @@ import { DataTable } from "@/components/dashboard/data-table";
 export default function BatchesPage() {
   const router = useRouter();
   const [batches, setBatches] = useState<ProcurementBatch[]>([]);
-  console.log("🚀 ~ BatchesPage ~ batches:", batches);
   const [loading, setLoading] = useState(true);
 
   const fetchBatches = async () => {
@@ -43,7 +42,6 @@ export default function BatchesPage() {
   const awaitingBatches = batches.filter(
     (b) => b.status === "awaiting_receipt" || b.status === "partially_received",
   );
-  console.log("🚀 ~ BatchesPage ~ awaitingBatches:", awaitingBatches);
 
   const statusVariant = (status: string) => {
     if (status === "received") return "default";

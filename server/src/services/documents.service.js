@@ -67,7 +67,6 @@ const getCategories = async (user, queryFilter = {}, options = {}) => {
 
 const createCategory = async (categoryData) => {
   const { name, parent, department, createdBy } = categoryData;
-  console.log("🚀 ~ createCategory ~ parent:", parent);
   try {
     const existingCategory = await Category.findOne({
       name: name.toLowerCase(),
@@ -112,7 +111,6 @@ const uploadDocument = async (file, fileData, user) => {
       department: user.department.name,
     },
   };
-  console.log("🚀 ~ uploadDocument ~ dataBuild:", dataBuild);
   const response = await Document.create(dataBuild);
   return response;
 };

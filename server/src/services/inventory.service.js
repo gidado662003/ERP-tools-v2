@@ -156,7 +156,6 @@ async function getInventory() {
   const inventory = await Inventory.find()
     .populate("product", "name unit")
     .lean();
-  console.log("🚀 ~ getInventory ~ inventory:", inventory);
   return inventory;
 }
 

@@ -24,7 +24,6 @@ function getInitials(name: string) {
 }
 
 export default function SupplierList({ suppliers }: { suppliers: Supplier[] }) {
-  console.log("🚀 ~ SupplierList ~ suppliers:", suppliers);
   const [data, setData] = useState(suppliers);
   //   const [loading, setLoading] = useState(true);
   const router = useRouter();

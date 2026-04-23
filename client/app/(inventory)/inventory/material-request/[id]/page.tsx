@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import React from "react";
 import { materialRequestAPI } from "@/lib/material-request/material-requestApi";
 import RequestById from "@/components/inventory/material-request/requestById";

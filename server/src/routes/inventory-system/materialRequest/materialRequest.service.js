@@ -62,11 +62,6 @@ const MaterialRequestService = {
     if (!reason || !items || !requestedBy) {
       throw new Error("Missing required fields: reason, items, requestedBy");
     }
-    console.log({
-      ...data,
-      requestNumber,
-      requestedBy,
-    });
     const materialRequest = await MaterialRequest.create({
       ...data,
       requestNumber,

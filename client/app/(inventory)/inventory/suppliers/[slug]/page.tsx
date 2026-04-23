@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import React from "react";
 import ProductsBySuppliers from "@/components/internal-requsitions/suppliers/productsBySuppliers";
 import { supplierAPI } from "@/lib/supplierAPI";
