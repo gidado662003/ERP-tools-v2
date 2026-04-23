@@ -46,9 +46,10 @@ const MaterialRequestService = {
   },
 
   getMaterialRequestById: async (id) => {
-    return await MaterialRequest.findById(id)
+    const data = await MaterialRequest.findById(id)
       .populate("items.inventory")
       .populate("items.product");
+    return data;
   },
 
   createMaterialRequest: async (data, user) => {

@@ -62,6 +62,7 @@ function RejectModal({
 
 // ── Main Component
 function RequestById({ data }: { data: PopulatedMaterialRequest }) {
+  console.log("🚀 ~ RequestById ~ data:", data);
   const [status, setStatus] = useState(data.status);
   const [loading, setLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -252,7 +253,8 @@ function RequestById({ data }: { data: PopulatedMaterialRequest }) {
                         {item.product.name}
                       </p>
                       <p className="text-[11px] text-[#9999aa] mt-0.5">
-                        Unit: {item.unit} · Location: {item.inventory.location}
+                        Unit: {item.unit} · Location:{" "}
+                        {item?.inventory?.location}
                       </p>
                     </div>
                     <div className="text-right">
@@ -260,7 +262,7 @@ function RequestById({ data }: { data: PopulatedMaterialRequest }) {
                         {item.quantity}
                       </p>
                       <p className="text-[10px] text-[#9999aa] mt-0.5">
-                        of {item.inventory.quantity} available
+                        of {item?.inventory?.quantity} available
                       </p>
                     </div>
                   </div>

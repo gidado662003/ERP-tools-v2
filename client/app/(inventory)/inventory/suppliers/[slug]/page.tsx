@@ -2,10 +2,11 @@ export const dynamic = "force-dynamic";
 import React from "react";
 import ProductsBySuppliers from "@/components/internal-requsitions/suppliers/productsBySuppliers";
 import { supplierAPI } from "@/lib/supplierAPI";
+import { supplierServerAPI } from "@/lib/supplierAPI.server";
 async function page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const id = slug.split("-").pop();
-  const products = await supplierAPI.productsBySupplier(id as string);
+  const products = await supplierServerAPI.productsBySupplier(id as string);
   return (
     <div>
       <ProductsBySuppliers products={products} />
