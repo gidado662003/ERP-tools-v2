@@ -53,7 +53,7 @@ function RequestList({
   const formattedData = requestsData.data.map((req: any) => ({
     ...req,
     reason: (
-      <span className="text-[#80708f] max-w-[200px] truncate block">
+      <span className="text-[#80708f] dark:text-[#c9c3d6] max-w-[200px] truncate block">
         {req.reason}
       </span>
     ),
@@ -64,7 +64,7 @@ function RequestList({
     }),
     status: (
       <Badge
-        className={`${handleStatusColor(req.status)} text-[10px] font-medium px-2 py-0.5 rounded-md`}
+        className={`${handleStatusColor(req.status)} text-[10px] font-medium p-2 `}
       >
         {req.status}
       </Badge>
