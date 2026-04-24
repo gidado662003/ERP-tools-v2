@@ -5,6 +5,7 @@ import { inventoryAPI } from "@/lib/inventoryApi";
 import SuppliersList, {
   Supplier,
 } from "../../internal-requsitions/SuppliersList";
+import ProductSelect from "../../inventory/productList";
 
 type FormState = {
   productName: string;
@@ -28,6 +29,7 @@ const initialState: FormState = {
 
 function NewBatch({ onCancel }: { onCancel?: () => void }) {
   const [form, setForm] = useState<FormState>(initialState);
+  console.log("🚀 ~ NewBatch ~ form:", form);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,14 +65,6 @@ function NewBatch({ onCancel }: { onCancel?: () => void }) {
   return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-7">
-        <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="2" width="5" height="5" rx="1" fill="#185FA5" />
-            <rect x="9" y="2" width="5" height="5" rx="1" fill="#185FA5" />
-            <rect x="2" y="9" width="5" height="5" rx="1" fill="#185FA5" />
-            <rect x="9" y="9" width="5" height="5" rx="1" fill="#185FA5" />
-          </svg>
-        </div>
         <div>
           <p className="text-sm font-medium text-foreground">
             New procurement batch
@@ -83,14 +77,11 @@ function NewBatch({ onCancel }: { onCancel?: () => void }) {
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-muted-foreground font-medium">
-            Product name
-          </label>
-          <input
-            className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-            placeholder="e.g. HP Laptop"
-            value={form.productName}
-            onChange={(e) => set("productName", e.target.value)}
+          <ProductSelect
+            label="Product name"
+            placeholder="Search products..."
+            onSelect={(product) => set("productName", product?.name ?? "")}
+            onChangeValue={(product) => set("productName", product ?? "")}
           />
         </div>
 
@@ -105,7 +96,7 @@ function NewBatch({ onCancel }: { onCancel?: () => void }) {
           >
             <option value="">Select type...</option>
             <option value="asset">Asset</option>
-            <option value="inventory">Inventory</option>
+            <option value="inventory">Stock</option>
           </select>
         </div>
 

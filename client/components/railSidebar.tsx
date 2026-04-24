@@ -75,10 +75,10 @@ function NavItem({
         ].join(" ")}
       >
         {active && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-r-full bg-blue-500 -translate-x-[8px]" />
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-2 w-0.5 rounded-r-full bg-blue-500 -translate-x-[8px]" />
         )}
         <Icon
-          size={24}
+          size={20}
           className={active ? "text-blue-500 dark:text-blue-400" : ""}
         />
         <span className="leading-none tracking-wide truncate max-w-full px-0.5">

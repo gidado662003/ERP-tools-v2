@@ -30,6 +30,7 @@ import {
 } from "../ui/select";
 import SuppliersList from "./SuppliersList";
 import { toast } from "sonner";
+import ProductSelect from "../inventory/productList";
 
 // Extend Supplier type locally — ideally share from a types file
 type Supplier = {
@@ -173,19 +174,34 @@ function RequisitionItems({
                   New
                 </TableCell>
                 <TableCell className="border-l border-slate-200/80">
-                  <Input
-                    placeholder="Enter description..."
-                    value={newItem.description}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, description: e.target.value })
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addItem();
+                  {equipment ? (
+                    <ProductSelect
+                      onSelect={(product) => {
+                        setNewItem({
+                          ...newItem,
+                          description: product?.name ?? "",
+                        });
+                      }}
+                      onChangeValue={(product) =>
+                        setNewItem({ ...newItem, description: product ?? "" })
                       }
-                    }}
-                  />
+                    />
+                  ) : (
+                    <Input
+                      placeholder="Enter description..."
+                      value={newItem.description}
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, description: e.target.value })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addItem();
+                        }
+                      }}
+                    />
+                  )}
+                  {}
                 </TableCell>
                 <TableCell className="border-l border-slate-200/80">
                   <Input

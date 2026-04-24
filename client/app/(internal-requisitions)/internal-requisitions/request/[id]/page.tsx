@@ -209,9 +209,9 @@ export default function RequestDetailsPage() {
     status: "approved" | "outstanding" | "rejected",
   ) => {
     if (!id || !request) return;
-    // if (!isDev && user?.department !== "Finance") {
-    //   return toast.error("You are not authorized to update this request");
-    // }
+    if (!isDev && user?.department !== "Finance") {
+      return toast.error("You are not authorized to update this request");
+    }
     if (status !== "rejected") {
       if (!selectedBank) return toast.error("Please select a bank account.");
       if (!amountToPay || amountToPay <= 0)
