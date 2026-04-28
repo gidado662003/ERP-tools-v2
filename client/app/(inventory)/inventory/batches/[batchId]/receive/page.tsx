@@ -23,7 +23,7 @@ import { toast } from "sonner";
 type AssetMeta = {
   serialNumber: string;
   condition: "NEW" | "GOOD" | "FAIR" | "DAMAGED";
-  category: "pop" | "noc" | "cpe" | "other";
+  category: "pop" | "noc" | "cpe" | "other" | "store";
   ownership: "COMPANY" | "CUSTOMER";
   purchaseDate: string;
   notes: string;
@@ -32,19 +32,20 @@ type AssetMeta = {
 const defaultMeta = (): AssetMeta => ({
   serialNumber: "",
   condition: "NEW",
-  category: "pop",
+  category: "store",
   ownership: "COMPANY",
   purchaseDate: new Date().toISOString().split("T")[0],
   notes: "",
 });
 
 const CATEGORY_OPTIONS: {
-  value: "pop" | "noc" | "cpe" | "other";
+  value: "pop" | "noc" | "cpe" | "other" | "store";
   label: string;
 }[] = [
   { value: "pop", label: "POP" },
   { value: "noc", label: "NOC" },
   { value: "cpe", label: "CPE" },
+  { value: "store", label: "Store" },
   { value: "other", label: "Other" },
 ];
 
@@ -60,7 +61,7 @@ export default function ReceiveBatchPage() {
   const [assetMetas, setAssetMetas] = useState<AssetMeta[]>([]);
 
   const [bulkCategory, setBulkCategory] = useState<
-    "pop" | "noc" | "cpe" | "other"
+    "pop" | "noc" | "cpe" | "other" | "store"
   >("pop");
 
   const remainingToReceive = batch

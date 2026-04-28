@@ -2,6 +2,8 @@ const Asset = require("../models/asset.schema");
 const AssetMovement = require("../models/assetMovementSchema");
 const User = require("../models/user.schema");
 const Supplier = require("../models/supplier.schema");
+const Location = require("../models/location.schema");
+const mongoose = require("mongoose");
 async function getAssets() {
   const assets = await Asset.find().populate("product");
   return assets;
@@ -10,7 +12,6 @@ async function getAssets() {
 async function getAssetSummary({ search, location }) {
   const pipeline = [];
 
-  // 1️⃣ Optional early filtering (VERY important for performance)
   const matchStage = {};
 
   if (location) {
@@ -21,7 +22,6 @@ async function getAssetSummary({ search, location }) {
     pipeline.push({ $match: matchStage });
   }
 
-  // 2️⃣ Join Product
   pipeline.push(
     {
       $lookup: {
@@ -148,19 +148,24 @@ async function getAssetMovementsData(assetId, userSearch, supplierSearch) {
       }
     : {};
 
-  const [asset, users, vendors] = await Promise.all([
+  const [asset, users, vendors, locations] = await Promise.all([
     Asset.findById(assetId).populate("product"),
     User.find(userFilter).select("displayName email _id").limit(2).lean(),
     Supplier.find(supplierFilter)
       .select("name contactInfo _id")
       .limit(10)
       .lean(),
+    Location.find({ isActive: true })
+      .select("name type defaultCategory address")
+      .sort({ name: 1 })
+      .lean(),
   ]);
 
-  return { asset, users, vendors };
+  return { asset, users, vendors, locations };
 }
 
-async function moveAsset(movementData) {
+async function moveAsset(movementData,user) {
+  console.log(user);
   const asset = await Asset.findById(movementData.asset);
 
   if (!asset) {
@@ -169,6 +174,12 @@ async function moveAsset(movementData) {
 
   const movementPayload = {
     ...movementData,
+    performedById: user.id??user._id,
+    performedBySnapshot: {
+      id: user.id??user._id,
+      name: user.displayName??user.name,
+      email: user.email??user.username,
+    },
     fromStatus: asset.status,
     fromHolderType: asset.holderType,
     fromHolderId: asset.holderId,
@@ -177,6 +188,7 @@ async function moveAsset(movementData) {
     fromHolderSnapshot: asset.holderSnapshot ?? null,
   };
 
+
   const movement = await AssetMovement.create(movementPayload);
 
   const update = {
@@ -184,9 +196,25 @@ async function moveAsset(movementData) {
   };
 
   const setFields = {};
+  let resolvedCategory = null;
 
   if (movementData.toLocation) {
     setFields.location = movementData.toLocation;
+  }
+
+  if (movementData.toLocationId) {
+    const destinationLocation = await Location.findOne({
+      _id: movementData.toLocationId,
+      isActive: true,
+    }).lean();
+
+    if (!destinationLocation) {
+      throw new Error("Destination location is invalid or inactive");
+    }
+
+    setFields.locationRef = destinationLocation._id;
+    setFields.location = destinationLocation.name;
+    resolvedCategory = destinationLocation.defaultCategory;
   }
 
   if (movementData.toStatus) {
@@ -197,14 +225,22 @@ async function moveAsset(movementData) {
     setFields.holderType = movementData.toHolderType;
   }
 
-  if (movementData.toHolder) {
-    setFields.holder = movementData.toHolder;
+  if (movementData.toHolderId && mongoose.Types.ObjectId.isValid(movementData.toHolderId)) {
+    setFields.holder = movementData.toHolderId;
+  }
+
+  if (!resolvedCategory && movementData.toHolderType === "CUSTOMER") {
+    resolvedCategory = "cpe";
+  }
+
+  if (resolvedCategory) {
+    setFields.category = resolvedCategory;
   }
 
   if (Object.keys(setFields).length > 0) {
     update.$set = setFields;
   }
-  // 3️⃣ Update asset (awaited!)
+
   const updatedAsset = await Asset.findByIdAndUpdate(
     movementData.asset,
     update,

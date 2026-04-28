@@ -5,7 +5,7 @@ import { inventoryAPI } from "@/lib/inventoryApi";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
+import { useSetFilter } from "@/helper/setURLquery";
 export interface Supplier {
   _id: string;
   name: string;
@@ -24,9 +24,13 @@ function getInitials(name: string) {
 }
 
 export default function SupplierList({ suppliers }: { suppliers: Supplier[] }) {
-  const [data, setData] = useState(suppliers);
-  //   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const setFilter = useSetFilter();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    setFilter("search", searchTerm);
+  }, [searchTerm]);
   return (
     <div className="p-2">
       <div className="flex items-center justify-between mb-4">
@@ -34,11 +38,15 @@ export default function SupplierList({ suppliers }: { suppliers: Supplier[] }) {
           Suppliers
         </span>
         <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
-          {data?.length} total
+          {suppliers?.length} total
         </span>
       </div>
       <div className="flex  justify-between gap-2.5 ">
-        <Input placeholder="Search suppliers..." className="mb-4" />
+        <Input
+          placeholder="Search suppliers..."
+          className="mb-4"
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <Button className="bg-blue-400 hover:bg-blue-600 text-white">
           Search
         </Button>
@@ -47,15 +55,14 @@ export default function SupplierList({ suppliers }: { suppliers: Supplier[] }) {
       <div className="border-t border-zinc-100 mb-4" />
 
       <div className="grid lg:grid-cols-3 grid-cols-1 gap-2.5">
-        {data.length === 0 ? (
+        {suppliers.length === 0 ? (
           <p className="text-sm font-mono text-zinc-400 text-center py-8">
             No suppliers found
           </p>
         ) : (
-          data.map((supplier) => (
+          suppliers.map((supplier) => (
             <div
               onClick={() => {
-                // window.location.href = `/inventory/suppliers/${supplier.slug}-${supplier._id}`;
                 router.push(
                   `/inventory/suppliers/${supplier.slug}-${supplier._id}`,
                 );

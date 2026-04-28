@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { mettingAppAPI } from "@/lib/mettingAppApi";
+import { mettingAppAPI } from "@/lib/meeting/mettingAppApi";
 import { useParams } from "next/navigation";
 import {
   Calendar,

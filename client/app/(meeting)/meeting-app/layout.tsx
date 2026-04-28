@@ -2,13 +2,36 @@
 import React from "react";
 import MeetingAppSidebar from "@/components/meeting-app/meeting-app-sidebar";
 import Link from "next/link";
+import IconRailSidebar from "@/components/railSidebar";
+import { LayoutDashboard, Bot, ListChecks } from "lucide-react";
 
 function MeetingLayout({ children }: { children: React.ReactNode }) {
+  const sidebarItems = [
+    {
+      href: "/meeting-app",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      href: "/meeting-app/meeting-list",
+      label: "Meetings",
+      icon: ListChecks,
+    },
+    {
+      href: "/meeting-app/aibot",
+      label: "AI Bot",
+      icon: Bot,
+    },
+  ];
   return (
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
         {/* Sidebar */}
-        <MeetingAppSidebar />
+        <IconRailSidebar
+          items={sidebarItems}
+          rootHref="/meeting-app"
+          initials="MA"
+        />
 
         {/* Content Area */}
         <div className="flex min-w-0 flex-1 flex-col">

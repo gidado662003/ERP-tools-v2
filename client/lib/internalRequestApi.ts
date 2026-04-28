@@ -147,5 +147,35 @@ export const internalRequestAPI = {
       throw error;
     }
   },
+  categoryList: async (searchTerm?: string) => {
+    try {
+      const res = await requestApi.get("/categories", {
+        params: {
+          search: searchTerm,
+        },
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Fetch category list failed", error);
+      throw error;
+    }
+  },
+  createCategory: async ({
+    name,
+    description,
+  }: {
+    name: string;
+    description?: string;
+  }) => {
+    try {
+      const res = await requestApi.post("/categories/create", {
+        name,
+        description,
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Create category failed", error);
+      throw error;
+    }
+  },
 };
-// /internalrequest/allrequest

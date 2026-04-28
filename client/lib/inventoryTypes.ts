@@ -23,6 +23,7 @@ export type InventoryCategory =
   | "noc"
   | "cpe"
   | "tool"
+  | "store"
   | "other";
 
 export type InventoryItem = {

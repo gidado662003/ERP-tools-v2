@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const Chat = require("../src/models/chat.schema");
 const Message = require("../src/models/message.schema");
 const User = require("../src/models/user.schema");
+const seedCategories = require("./seeds/categorySeed");
 
 const server = http.createServer(app);
 
@@ -257,6 +258,7 @@ io.on("connection", async (socket) => {
 async function startServer() {
   try {
     await mongoose.connect(MONGODB_URI);
+    await seedCategories();
     console.log("Connected to MongoDB");
 
     server.listen(PORT, () => {

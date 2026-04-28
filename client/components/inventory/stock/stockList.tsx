@@ -93,12 +93,19 @@ function StockList({ inventoryData }: { inventoryData: InventoryItem[] }) {
       </div>
     ),
     category: (
+      // <span
+      //   className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+      //     CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.other
+      //   }`}
+      // >
+      //   {CATEGORY_LABELS[item.category] ?? item.category}
+      // </span>
       <span
         className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-          CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.other
+          CATEGORY_COLORS.other
         }`}
       >
-        {CATEGORY_LABELS[item.category] ?? item.category}
+        {item.category}
       </span>
     ),
     quantity: <QuantityCell item={item} />,

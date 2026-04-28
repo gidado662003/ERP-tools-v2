@@ -195,7 +195,7 @@ export default function IconRailSidebar({
 
   return (
     <>
-      <div className="w-16 shrink-0 border-r border-border bg-card hidden md:flex flex-col h-screen sticky top-0 items-center py-3 gap-1">
+      <div className="w-20 shrink-0 border-r border-border bg-card hidden md:flex flex-col h-screen sticky top-0 items-center py-3 gap-1">
         <Link
           href={rootHref}
           className={[

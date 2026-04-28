@@ -26,7 +26,7 @@ const categorySchema = new mongoose.Schema(
     },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
+      ref: "documentCategory",
       default: null,
     },
     isDeleted: {
@@ -49,4 +49,4 @@ const categorySchema = new mongoose.Schema(
 
 categorySchema.index({ name: 1, department: 1, parent: 1 }, { unique: true });
 
-module.exports = mongoose.model("Category", categorySchema);
+module.exports = mongoose.model("documentCategory", categorySchema);

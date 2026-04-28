@@ -47,18 +47,6 @@ const apps = [
     featured: true,
   },
   {
-    name: "Operations",
-    description: "Manage jobs, material requests and field operations",
-    icon: Toolbox,
-    href: "/operations/",
-    module: "operations",
-    accent: "#b34848",
-    accentLight: "#fde8e8",
-    accentDark: "#3b0a0a",
-    tag: "Operations",
-    featured: true,
-  },
-  {
     name: "Inventory System",
     description: "Monitor assets, stock levels, and supply chains",
     icon: ShoppingCart,
@@ -68,7 +56,7 @@ const apps = [
     accentLight: "#EDE9FE",
     accentDark: "#3b0764",
     tag: "Logistics",
-    featured: false,
+    featured: true,
   },
   {
     name: "Meeting App",
@@ -76,9 +64,9 @@ const apps = [
     icon: Calendar,
     href: "/meeting-app/",
     module: "meeting",
-    accent: "#F59E0B",
-    accentLight: "#FEF3C7",
-    accentDark: "#451a03",
+    accent: "#0bf51b",
+    accentLight: "#9e8210",
+    accentDark: "#9b3b07",
     tag: "Meeting",
     featured: false,
   },
@@ -92,7 +80,7 @@ const apps = [
     accentLight: "#FEF3C7",
     accentDark: "#451a03",
     tag: "Documents",
-    featured: true,
+    featured: false,
     features: [
       "Upload and manage .pptx files",
       "Organize by department and category",
@@ -173,7 +161,7 @@ function HomePage() {
           />
         </div>
 
-        <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-4 lg:grid-cols-4">
+        <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-4 lg:grid-cols-3">
           {featured.map((app, i) => {
             const Icon = app.icon;
             return (

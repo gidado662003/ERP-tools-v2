@@ -18,7 +18,7 @@ import {
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { CreateRequisitionPayload } from "@/lib/internalRequestTypes";
-
+import Category from "./category/categoryList";
 function RequestForm({
   handleNextStep,
   formData,
@@ -30,6 +30,7 @@ function RequestForm({
     React.SetStateAction<CreateRequisitionPayload>
   >;
 }) {
+  console.log("🚀 ~ RequestForm ~ formData:", formData);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const Locations = [
     { value: "Ikeja", label: "Ikeja" },
@@ -119,7 +120,7 @@ function RequestForm({
             <label htmlFor="priority">
               Category <span className="text-destructive">*</span>
             </label>
-            <Select
+            {/* <Select
               value={formData.category}
               onValueChange={(value) =>
                 handleFormData((prev) => ({ ...prev, category: value }))
@@ -135,7 +136,15 @@ function RequestForm({
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
+            <Category
+              onSelect={(category) => {
+                handleFormData((prev) => ({
+                  ...prev,
+                  category: category.name,
+                }));
+              }}
+            />
           </div>
         </div>
 

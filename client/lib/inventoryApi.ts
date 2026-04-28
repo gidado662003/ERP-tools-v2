@@ -11,7 +11,7 @@ import type { AssetGroup } from "@/lib/inventoryTypes";
 type AssetMeta = {
   serialNumber: string;
   condition: "NEW" | "GOOD" | "FAIR" | "DAMAGED";
-  category: "pop" | "noc" | "cpe" | "other";
+  category: "pop" | "noc" | "cpe" | "other" | "store";
   ownership: "COMPANY" | "CUSTOMER";
   purchaseDate: string;
   notes: string;

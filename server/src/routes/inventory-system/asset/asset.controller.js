@@ -54,7 +54,12 @@ const assetController = {
   },
   moveAssetController: async (req, res) => {
     try {
-      const movement = await moveAsset(req.body);
+      const user = req.user;
+      console.log(user);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const movement = await moveAsset(req.body, user);
       res.status(200).json(movement);
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -28,6 +28,21 @@ function statusVariant(status: Asset["status"]) {
   }
 }
 
+function categoryVariant(category: Asset["category"]) {
+  switch (category) {
+    case "noc":
+      return "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400";
+    case "store":
+      return "bg-green-50 text-green-700 dark:bg-green-900/50 dark:text-green-400";
+    case "cpe":
+      return "bg-amber-50 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400";
+    case "pop":
+      return "bg-purple-50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 const statCards = [
   {
     label: "In Stock",
@@ -107,6 +122,11 @@ export default function AssetProductDetailPage() {
       <span className="text-sm text-muted-foreground">
         {a.holderType || "—"}
       </span>
+    ),
+    category: (
+      <Badge className={`text-xs ${categoryVariant(a.category)}`}>
+        {a.category || "—"}
+      </Badge>
     ),
     createdAt: (
       <span className="text-xs text-muted-foreground tabular-nums">
@@ -212,6 +232,7 @@ export default function AssetProductDetailPage() {
               { key: "location", label: "Location" },
               { key: "assignedTo", label: "Assigned To" },
               { key: "type", label: "Type" },
+              { key: "category", label: "Category" },
               { key: "createdAt", label: "Created" },
               { key: "updatedAt", label: "Updated" },
             ]}

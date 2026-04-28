@@ -38,7 +38,7 @@ function InventoryLayout({ children }: { children: React.ReactNode }) {
       data: [
         { label: "All Assets", href: "/inventory/assets" },
         { label: "Asset Types", href: "/inventory/assets/types" },
-        { label: "Assigned Assets", href: "/inventory/assets/assigned" },
+        { label: "Asset Locations", href: "/inventory/assets/locations" },
       ],
     },
     {

@@ -1,26 +1,29 @@
 "use client";
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import React, { useState, useEffect } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Loader2, ClipboardList, Plus, Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { mettingAppAPI } from "@/lib/mettingAppApi";
+  Loader2,
+  ClipboardList,
+  Plus,
+  Trash2,
+  AlertCircle,
+  RotateCcw,
+  CheckCircle2,
+} from "lucide-react";
+import { mettingAppAPI } from "@/lib/meeting/mettingAppApi";
 import { toast } from "sonner";
+
+const DRAFT_KEY = "meeting_draft";
+
+const inputCls =
+  "w-full h-8 rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] px-3 text-[13px] text-[#1d1c21] dark:text-[#e4e0f0] placeholder:text-[#b0a8bb] dark:placeholder:text-[#5a5468] outline-none transition-all focus:border-[#6c5fc7] focus:ring-[3px] focus:ring-[#6c5fc7]/10";
+
+const textareaCls =
+  "w-full rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] px-3 py-2 text-[13px] text-[#1d1c21] dark:text-[#e4e0f0] placeholder:text-[#b0a8bb] dark:placeholder:text-[#5a5468] outline-none transition-all focus:border-[#6c5fc7] focus:ring-[3px] focus:ring-[#6c5fc7]/10 resize-none";
+
+const labelCls = "text-[12px] font-medium text-[#3b3440] dark:text-[#a89cc0]";
+
+const selectCls =
+  "w-full h-8 rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] px-3 text-[13px] text-[#1d1c21] dark:text-[#e4e0f0] outline-none transition-all focus:border-[#6c5fc7] focus:ring-[3px] focus:ring-[#6c5fc7]/10";
 
 function UseAiBot() {
   const [description, setDescription] = useState("");
@@ -29,67 +32,83 @@ function UseAiBot() {
   const [error, setError] = useState("");
   const [meetingData, setMeetingData] = useState<any>(null);
   const [actionItemsData, setActionItemsData] = useState<any[]>([]);
+  const [draftRestored, setDraftRestored] = useState(false);
 
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (saved) {
+      const { meetingData, actionItemsData, description } = JSON.parse(saved);
+      if (meetingData) {
+        setMeetingData(meetingData);
+        setActionItemsData(actionItemsData || []);
+        setDraftRestored(true);
+        toast.info("Restored your unsaved meeting draft.");
+      }
+      if (description) setDescription(description);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!meetingData && !description) return;
+    const timer = setTimeout(() => {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ meetingData, actionItemsData, description }),
+      );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [meetingData, actionItemsData, description]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) {
-      setError("Please enter meeting text");
+      setError("Please enter meeting notes.");
       return;
     }
-
     setIsLoading(true);
     setError("");
     setMeetingData(null);
     setActionItemsData([]);
-
     try {
-      const response = await fetch("http://10.10.253.3:5678/webhook/ai-agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description,
-          date: new Date().toISOString().split("T")[0],
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to parse meeting");
-
+      const response = await fetch(
+        "http://102.36.135.18:3000/n8n/webhook/ai-agent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description,
+            date: new Date().toISOString().split("T")[0],
+          }),
+        },
+      );
+      if (!response.ok) throw new Error();
       const data = await response.json();
-      const processedData = Array.isArray(data) ? data[0] : data;
-
-      // Separate action items from meeting data
-      const { actionItems, ...rest } = processedData;
+      const processed = Array.isArray(data) ? data[0] : data;
+      const { actionItems, ...rest } = processed;
       setMeetingData(rest);
       setActionItemsData(actionItems || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("Failed to process meeting. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFieldChange = (field: string, value: any) => {
-    setMeetingData((prev: any) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const handleFieldChange = (field: string, value: any) =>
+    setMeetingData((prev: any) => ({ ...prev, [field]: value }));
 
   const handleActionItemChange = (
     index: number,
     field: string,
     value: string,
-  ) => {
+  ) =>
     setActionItemsData((prev) => {
-      const newItems = [...prev];
-      newItems[index] = { ...newItems[index], [field]: value };
-      return newItems;
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
     });
-  };
 
-  const addActionItem = () => {
+  const addActionItem = () =>
     setActionItemsData((prev) => [
       ...prev,
       {
@@ -100,383 +119,398 @@ function UseAiBot() {
         status: "pending",
       },
     ]);
-  };
 
-  const removeActionItem = (index: number) => {
+  const removeActionItem = (index: number) =>
     setActionItemsData((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleFinalSubmit = async () => {
-    if (!meetingData) {
-      setError("No data to submit.");
-      return;
-    }
-
     setIsSubmitting(true);
     setError("");
-
     try {
-      // Combine meeting data with action items
-      const completeMeetingData = {
-        ...meetingData,
-        actionItems: actionItemsData,
-      };
-   
       await mettingAppAPI.createMeeting({ meetingData, actionItemsData });
-      toast("Meeting data submitted successfully!");
+      toast("Meeting submitted successfully!");
+      localStorage.removeItem(DRAFT_KEY);
       setMeetingData(null);
       setActionItemsData([]);
       setDescription("");
-    } catch (err) {
-      console.error("Failed to save meeting:", err);
+      setDraftRestored(false);
+    } catch {
       setError("Failed to submit meeting data.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleAttendeesChange = (value: string) => {
-    const attendeesArray = value
-      .split(",")
-      .map((item) => item.trim())
-      .filter((item) => item);
-    handleFieldChange("attendees", attendeesArray);
-  };
-
-  const handleDepartmentChange = (value: string) => {
-    handleFieldChange("department", value);
-  };
-
   const resetForm = () => {
+    localStorage.removeItem(DRAFT_KEY);
     setMeetingData(null);
     setActionItemsData([]);
     setDescription("");
     setError("");
+    setDraftRestored(false);
   };
 
-  // Helper functions
-  const getFieldValue = (field: string) => {
-    return meetingData?.[field] || "";
-  };
+  const get = (field: string) => meetingData?.[field] || "";
+
+  const Subcard = ({
+    title,
+    subtitle,
+    action,
+    children,
+  }: {
+    title: string;
+    subtitle?: string;
+    action?: React.ReactNode;
+    children: React.ReactNode;
+  }) => (
+    <div className="border border-[#e0dfe3] dark:border-[#2a2535] rounded-md">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e0dfe3] dark:border-[#2a2535]">
+        <div>
+          <p className="text-[13px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
+            {title}
+          </p>
+          {subtitle && (
+            <p className="text-[12px] text-[#80748d] dark:text-[#6b6080] mt-0.5">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {action}
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <ClipboardList className="h-6 w-6 text-blue-600" />
-                AI Meeting Parser
-              </CardTitle>
-              <CardDescription>
-                Convert meeting notes into structured meeting data.
-              </CardDescription>
-            </CardHeader>
+    <div className=" mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-4 items-start">
+        {/* ── Main card ── */}
+        <div className="bg-white dark:bg-[#141320] border border-[#e0dfe3] dark:border-[#2a2535] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
+          <div className="px-5 pt-5">
+            <h1 className="text-[15px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0] flex items-center gap-2 tracking-tight">
+              <ClipboardList className="h-4 w-4 text-[#6c5fc7]" />
+              AI Meeting Parser
+            </h1>
+            <p className="text-[13px] text-[#80748d] dark:text-[#6b6080] mt-0.5">
+              Convert meeting notes into structured meeting data.
+            </p>
+            <div className="mt-4 border-t border-[#e0dfe3] dark:border-[#2a2535]" />
+          </div>
 
-            <CardContent className="space-y-6">
-              {!meetingData ? (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Meeting Notes</label>
-                    <Textarea
-                      rows={10}
-                      placeholder="Paste your meeting notes here..."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="resize-none font-mono text-sm"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{description.length} characters</span>
-                    </div>
-                    {error && (
-                      <p className="text-sm text-red-500 mt-2">{error}</p>
-                    )}
-                  </div>
+          <div className="p-5">
+            {/* Error banner */}
+            {error && (
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-[#fff5f5] dark:bg-[#2d1a1a] border border-[#f8d0d0] dark:border-[#5c2a2a] rounded-md text-[13px] text-[#c93a3a] mb-4">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {error}
+              </div>
+            )}
 
-                  <Button
-                    type="submit"
-                    disabled={isLoading || !description.trim()}
-                    className="w-full"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Parsing Meeting...
-                      </>
-                    ) : (
-                      "Parse Meeting Notes"
-                    )}
-                  </Button>
-                </form>
-              ) : (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">
-                      Review & Edit Meeting Data
-                    </h3>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleFinalSubmit}
-                        className="bg-green-600 hover:bg-green-700"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          "Submit Meeting"
-                        )}
-                      </Button>
-                      <Button onClick={resetForm} variant="outline">
-                        New Meeting
-                      </Button>
-                    </div>
-                  </div>
+            {/* Draft restored banner */}
+            {draftRestored && (
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-[#faf8ff] dark:bg-[#1e1a2e] border border-[#d4cef5] dark:border-[#3d3560] rounded-md text-[13px] text-[#6c5fc7] mb-4">
+                <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                Draft restored from your last session.
+                <button
+                  onClick={resetForm}
+                  className="ml-auto text-[12px] underline underline-offset-2 opacity-80 hover:opacity-100"
+                >
+                  Discard
+                </button>
+              </div>
+            )}
 
-                  {/* Meeting Details Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-md">Meeting Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                      {/* Title + Date + Department */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label>Meeting Title</Label>
-                          <Input
-                            value={getFieldValue("title")}
-                            onChange={(e) =>
-                              handleFieldChange("title", e.target.value)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label>Date</Label>
-                          <Input
-                            type="date"
-                            value={getFieldValue("date")}
-                            onChange={(e) =>
-                              handleFieldChange("date", e.target.value)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label>Department</Label>
-                          <Input
-                            value={getFieldValue("department") || ""}
-                            onChange={(e) =>
-                              handleDepartmentChange(e.target.value)
-                            }
-                            placeholder="e.g., IT, HR, Management"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Attendees */}
-                      <div>
-                        <Label>Attendees (comma-separated)</Label>
-                        <Textarea
-                          value={
-                            Array.isArray(getFieldValue("attendees"))
-                              ? getFieldValue("attendees").join(", ")
-                              : getFieldValue("attendees") || ""
-                          }
-                          onChange={(e) =>
-                            handleAttendeesChange(e.target.value)
-                          }
-                          placeholder="Mr. John, Mrs. Smith, Dr. Brown"
-                          rows={2}
-                        />
-                      </div>
-
-                      {/* Agenda */}
-                      <div>
-                        <Label>Agenda</Label>
-                        <Textarea
-                          value={getFieldValue("agenda")}
-                          onChange={(e) =>
-                            handleFieldChange("agenda", e.target.value)
-                          }
-                          rows={3}
-                        />
-                      </div>
-
-                      {/* Minutes */}
-                      <div>
-                        <Label>Minutes</Label>
-                        <Textarea
-                          value={getFieldValue("minutes")}
-                          onChange={(e) =>
-                            handleFieldChange("minutes", e.target.value)
-                          }
-                          rows={4}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Action Items Card - Separated */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-md">Action Items</CardTitle>
-                        <CardDescription>
-                          Tasks and assignments from the meeting
-                        </CardDescription>
-                      </div>
-                      <Button
-                        onClick={addActionItem}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Action Item
-                      </Button>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="space-y-4">
-                        {actionItemsData.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            No action items yet. Click "Add Action Item" to
-                            create one.
-                          </p>
-                        ) : (
-                          actionItemsData.map((item: any, i: number) => (
-                            <Card key={i} className="p-4 border-2">
-                              <div className="flex justify-between items-start mb-4">
-                                <h4 className="font-medium text-base">
-                                  Action Item #{i + 1}
-                                </h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeActionItem(i)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                  <Label>Description</Label>
-                                  <Textarea
-                                    value={item.desc || ""}
-                                    onChange={(e) =>
-                                      handleActionItemChange(
-                                        i,
-                                        "desc",
-                                        e.target.value,
-                                      )
-                                    }
-                                    placeholder="Describe the action item..."
-                                    rows={2}
-                                  />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label>Owner</Label>
-                                    <Input
-                                      value={item.owner || ""}
-                                      onChange={(e) =>
-                                        handleActionItemChange(
-                                          i,
-                                          "owner",
-                                          e.target.value,
-                                        )
-                                      }
-                                      placeholder="Assign owner..."
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label>Due Date</Label>
-                                    <Input
-                                      type="date"
-                                      value={item.due || ""}
-                                      onChange={(e) =>
-                                        handleActionItemChange(
-                                          i,
-                                          "due",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label>Status</Label>
-                                    <Select
-                                      value={item.status || "pending"}
-                                      onValueChange={(v) =>
-                                        handleActionItemChange(i, "status", v)
-                                      }
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pending">
-                                          Pending
-                                        </SelectItem>
-                                        <SelectItem value="completed">
-                                          Completed
-                                        </SelectItem>
-                                        <SelectItem value="ongoing">
-                                          Ongoing
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label>Penalty</Label>
-                                    <Input
-                                      value={item.penalty || "N/A"}
-                                      onChange={(e) =>
-                                        handleActionItemChange(
-                                          i,
-                                          "penalty",
-                                          e.target.value,
-                                        )
-                                      }
-                                      placeholder="Penalty for non-compliance..."
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </Card>
-                          ))
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+            {/* ── Step 1: Input ── */}
+            {!meetingData ? (
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>Meeting Notes</label>
+                  <textarea
+                    rows={10}
+                    placeholder="Paste your meeting notes here..."
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      if (error) setError("");
+                    }}
+                    className={`${textareaCls} font-mono`}
+                  />
+                  <span className="text-[12px] text-[#80748d] dark:text-[#6b6080] text-right">
+                    {description.length} characters
+                  </span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <button
+                  type="submit"
+                  disabled={isLoading || !description.trim()}
+                  className="w-full h-9 flex items-center justify-center gap-2 rounded-md bg-[#6c5fc7] text-[13px] font-medium text-white transition-colors hover:bg-[#5c4eb5] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Parsing
+                      Meeting...
+                    </>
+                  ) : (
+                    "Parse Meeting Notes"
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* ── Step 2: Review ── */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[14px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
+                    Review & Edit Meeting Data
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleFinalSubmit}
+                      disabled={isSubmitting}
+                      className="h-8 px-3 flex items-center gap-2 rounded-md bg-[#2a7d4f] text-[13px] font-medium text-white hover:bg-[#236040] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit Meeting"
+                      )}
+                    </button>
+                    <button
+                      onClick={resetForm}
+                      className="h-8 px-3 rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] text-[13px] font-medium text-[#3b3440] dark:text-[#c4bcd8] hover:bg-[#f6f6f7] dark:hover:bg-[#221f30] transition-colors"
+                    >
+                      New Meeting
+                    </button>
+                  </div>
+                </div>
+
+                {/* Meeting Details */}
+                <Subcard title="Meeting Details">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        {
+                          label: "Meeting Title",
+                          field: "title",
+                          placeholder: "e.g., Q3 Review",
+                        },
+                        { label: "Date", field: "date", type: "date" },
+                        {
+                          label: "Department",
+                          field: "department",
+                          placeholder: "e.g., IT, HR",
+                        },
+                      ].map(({ label, field, type, placeholder }) => (
+                        <div key={field} className="flex flex-col gap-1.5">
+                          <label className={labelCls}>{label}</label>
+                          <input
+                            type={type || "text"}
+                            value={get(field)}
+                            onChange={(e) =>
+                              handleFieldChange(field, e.target.value)
+                            }
+                            placeholder={placeholder}
+                            className={inputCls}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {[
+                      {
+                        label: "Attendees (comma-separated)",
+                        field: "attendees",
+                        rows: 2,
+                        placeholder: "Mr. John, Mrs. Smith",
+                      },
+                      { label: "Agenda", field: "agenda", rows: 3 },
+                      { label: "Minutes", field: "minutes", rows: 4 },
+                    ].map(({ label, field, rows, placeholder }) => (
+                      <div key={field} className="flex flex-col gap-1.5">
+                        <label className={labelCls}>{label}</label>
+                        <textarea
+                          rows={rows}
+                          value={
+                            Array.isArray(get(field))
+                              ? get(field).join(", ")
+                              : get(field)
+                          }
+                          onChange={(e) => {
+                            const val =
+                              field === "attendees"
+                                ? e.target.value
+                                    .split(",")
+                                    .map((s: string) => s.trim())
+                                    .filter(Boolean)
+                                : e.target.value;
+                            handleFieldChange(field, val);
+                          }}
+                          placeholder={placeholder}
+                          className={textareaCls}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </Subcard>
+
+                {/* Action Items */}
+                <Subcard
+                  title="Action Items"
+                  subtitle="Tasks and assignments from the meeting"
+                  action={
+                    <button
+                      onClick={addActionItem}
+                      className="h-7 px-2.5 flex items-center gap-1.5 rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] text-[12px] font-medium text-[#3b3440] dark:text-[#c4bcd8] hover:bg-[#f6f6f7] dark:hover:bg-[#221f30] transition-colors"
+                    >
+                      <Plus className="h-3 w-3" /> Add Item
+                    </button>
+                  }
+                >
+                  {actionItemsData.length === 0 ? (
+                    <p className="text-center text-[13px] text-[#80748d] dark:text-[#6b6080] py-5">
+                      No action items yet. Click "Add Item" to create one.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {actionItemsData.map((item: any, i: number) => (
+                        <div
+                          key={i}
+                          className="border border-[#e0dfe3] dark:border-[#2a2535] rounded-md p-3 space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-[#80748d] dark:text-[#6b6080] uppercase tracking-wider">
+                              Item #{i + 1}
+                            </span>
+                            <button
+                              onClick={() => removeActionItem(i)}
+                              className="p-1 rounded text-[#c93a3a] hover:bg-[#fff5f5] dark:hover:bg-[#2d1a1a] transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className={labelCls}>Description</label>
+                            <textarea
+                              rows={2}
+                              value={item.desc || ""}
+                              onChange={(e) =>
+                                handleActionItemChange(
+                                  i,
+                                  "desc",
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="Describe the action item..."
+                              className={textareaCls}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {[
+                              {
+                                label: "Owner",
+                                field: "owner",
+                                placeholder: "Assign owner...",
+                              },
+                              { label: "Due Date", field: "due", type: "date" },
+                            ].map(({ label, field, type, placeholder }) => (
+                              <div
+                                key={field}
+                                className="flex flex-col gap-1.5"
+                              >
+                                <label className={labelCls}>{label}</label>
+                                <input
+                                  type={type || "text"}
+                                  value={item[field] || ""}
+                                  onChange={(e) =>
+                                    handleActionItemChange(
+                                      i,
+                                      field,
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder={placeholder}
+                                  className={inputCls}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1.5">
+                              <label className={labelCls}>Status</label>
+                              <select
+                                value={item.status || "pending"}
+                                onChange={(e) =>
+                                  handleActionItemChange(
+                                    i,
+                                    "status",
+                                    e.target.value,
+                                  )
+                                }
+                                className={selectCls}
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="ongoing">Ongoing</option>
+                                <option value="completed">Completed</option>
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <label className={labelCls}>Penalty</label>
+                              <input
+                                value={item.penalty || "N/A"}
+                                onChange={(e) =>
+                                  handleActionItemChange(
+                                    i,
+                                    "penalty",
+                                    e.target.value,
+                                  )
+                                }
+                                placeholder="N/A"
+                                className={inputCls}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Subcard>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-6">
-            <CardHeader>
-              <CardTitle>Formatting Guide</CardTitle>
-              <CardDescription>Tips for best results</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="text-sm space-y-1">
-                <li>• Use full dates (e.g., October 15, 2025)</li>
-                <li>• Include titles before names (Mr, Mrs)</li>
-                <li>• Specify penalties clearly when mentioned</li>
-                <li>• List all attendees explicitly</li>
-                <li>• Use numbered points for action items</li>
-              </ul>
-            </CardContent>
-          </Card>
+        {/* ── Sidebar ── */}
+        <div className="bg-white dark:bg-[#141320] border border-[#e0dfe3] dark:border-[#2a2535] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] sticky top-6">
+          <div className="px-4 pt-4">
+            <h2 className="text-[13px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
+              Formatting Guide
+            </h2>
+            <p className="text-[12px] text-[#80748d] dark:text-[#6b6080] mt-0.5">
+              Tips for best results
+            </p>
+            <div className="mt-3 border-t border-[#e0dfe3] dark:border-[#2a2535]" />
+          </div>
+          <ul className="p-4 space-y-2">
+            {[
+              "Use full dates (e.g., October 15, 2025)",
+              "Include titles before names (Mr, Mrs)",
+              "Specify penalties clearly when mentioned",
+              "List all attendees explicitly",
+              "Use numbered points for action items",
+            ].map((tip) => (
+              <li
+                key={tip}
+                className="flex gap-2 text-[13px] text-[#3b3440] dark:text-[#a89cc0] leading-snug"
+              >
+                <span className="text-[#6c5fc7] font-bold mt-px">•</span>
+                {tip}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

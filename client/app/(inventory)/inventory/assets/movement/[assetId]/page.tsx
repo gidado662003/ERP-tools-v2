@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { inventoryAPI } from "@/lib/inventoryApi";
 import { laravelAuthAPI } from "@/lib/laravelAPI";
 import EmployeeCombobox from "@/components/employees/EmployeeCombobox";
+import LocationSelect from "@/components/inventory/locationList";
 import {
   ArrowLeft,
   Loader2,
@@ -30,17 +31,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmployeeDTO } from "@/lib/inventoryTypes";
+import {
+  MovementType,
+  MOVEMENT_META,
+  STATUS_COLORS,
+  allowedHolderTypes,
+  getRemainingStatus,
+  isAllowedMovement,
+} from "./movementRules";
 
 // ── Types ────────────────────────────────────────────────────────────────────
-
-type MovementType =
-  | "ASSIGN"
-  | "RETURN"
-  | "TRANSFER"
-  | "RELOCATE"
-  | "MAINTENANCE_OUT"
-  | "MAINTENANCE_RETURN"
-  | "DISPOSE";
 
 type Asset = {
   _id: string;
@@ -63,68 +63,12 @@ type Vendor = {
 type Customer = {
   id: number | string;
   clients: string;
+  address?: string;
+  customer_email?: string;
   [key: string]: unknown;
 };
 
-// ── Constants ────────────────────────────────────────────────────────────────
-
-const MOVEMENT_META: Record<
-  MovementType,
-  { label: string; description: string; color: string; bg: string }
-> = {
-  ASSIGN: {
-    label: "Assign",
-    description: "Assign to an employee or customer",
-    color: "text-blue-700",
-    bg: "bg-blue-50 border-blue-200",
-  },
-  RETURN: {
-    label: "Return",
-    description: "Return asset to warehouse",
-    color: "text-green-700",
-    bg: "bg-green-50 border-green-200",
-  },
-  TRANSFER: {
-    label: "Transfer",
-    description: "Transfer to another holder",
-    color: "text-violet-700",
-    bg: "bg-violet-50 border-violet-200",
-  },
-  RELOCATE: {
-    label: "Relocate",
-    description: "Move to a different location",
-    color: "text-amber-700",
-    bg: "bg-amber-50 border-amber-200",
-  },
-  MAINTENANCE_OUT: {
-    label: "Send for Maintenance",
-    description: "Send to vendor for maintenance",
-    color: "text-orange-700",
-    bg: "bg-orange-50 border-orange-200",
-  },
-  MAINTENANCE_RETURN: {
-    label: "Return from Maintenance",
-    description: "Receive back from maintenance",
-    color: "text-teal-700",
-    bg: "bg-teal-50 border-teal-200",
-  },
-  DISPOSE: {
-    label: "Dispose",
-    description: "Permanently retire this asset",
-    color: "text-red-700",
-    bg: "bg-red-50 border-red-200",
-  },
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  IN_STOCK: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  ASSIGNED: "bg-blue-100 text-blue-800 border-blue-200",
-  UNDER_MAINTENANCE: "bg-amber-100 text-amber-800 border-amber-200",
-  RETIRED: "bg-slate-100 text-slate-600 border-slate-200",
-  RETURNED: "bg-teal-100 text-teal-800 border-teal-200",
-};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
+type HolderType = "EMPLOYEE" | "CUSTOMER" | "VENDOR" | "STORE";
 
 function StatusBadge({ status }: { status: string }) {
   return (
@@ -146,8 +90,6 @@ function FieldError({ msg }: { msg?: string }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 export default function NewMovementPage() {
   const router = useRouter();
   const params = useParams();
@@ -167,6 +109,7 @@ export default function NewMovementPage() {
     type: "" as MovementType | "",
     toStatus: "",
     toLocation: "",
+    toLocationId: "",
     toHolderType: "",
 
     toHolderId: "",
@@ -174,14 +117,10 @@ export default function NewMovementPage() {
     toHolderSnapshot: { id: "", name: "", email: "" },
     reason: "",
     performedAt: new Date().toISOString().slice(0, 16),
-
-    performedById: "",
-    performedBySnapshot: { id: "", name: "", email: "" },
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ── Fetch asset + vendors ──────────────────────────────────────────────────
   useEffect(() => {
     async function fetchAssetData() {
       try {
@@ -197,7 +136,6 @@ export default function NewMovementPage() {
     fetchAssetData();
   }, [assetId]);
 
-  // ── Fetch employees (Laravel) ──────────────────────────────────────────────
   useEffect(() => {
     async function fetchEmployees() {
       try {
@@ -211,7 +149,7 @@ export default function NewMovementPage() {
     fetchEmployees();
   }, [employeeSearch]);
 
-  // ── Fetch customers (Laravel) ──────────────────────────────────────────────
+  // (Laravel)
   useEffect(() => {
     async function fetchCustomers() {
       try {
@@ -225,51 +163,7 @@ export default function NewMovementPage() {
     fetchCustomers();
   }, [customerSearch]);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-
   const isAssetRetired = asset?.status === "RETIRED";
-
-  const remainingStatus: Record<MovementType, string> = {
-    ASSIGN: "ASSIGNED",
-    RETURN: "IN_STOCK",
-    TRANSFER: "ASSIGNED",
-    MAINTENANCE_OUT: "UNDER_MAINTENANCE",
-    MAINTENANCE_RETURN: "IN_STOCK",
-    RELOCATE: asset?.status ?? "",
-    DISPOSE: "RETIRED",
-  };
-
-  const allowedHolderTypes: Record<MovementType, string[]> = {
-    ASSIGN: ["EMPLOYEE", "CUSTOMER"],
-    RETURN: ["WAREHOUSE"],
-    TRANSFER: ["EMPLOYEE", "CUSTOMER"],
-    MAINTENANCE_OUT: ["VENDOR"],
-    MAINTENANCE_RETURN: ["WAREHOUSE"],
-    RELOCATE: [],
-    DISPOSE: [],
-  };
-
-  const isAllowed = (type: MovementType): boolean => {
-    if (isAssetRetired || !asset) return false;
-    switch (type) {
-      case "ASSIGN":
-        return ["IN_STOCK", "RETURNED"].includes(asset.status);
-      case "RETURN":
-        return asset.status === "ASSIGNED";
-      case "TRANSFER":
-        return asset.status === "ASSIGNED";
-      case "RELOCATE":
-        return asset.status !== "RETIRED";
-      case "MAINTENANCE_OUT":
-        return ["IN_STOCK", "ASSIGNED"].includes(asset.status);
-      case "MAINTENANCE_RETURN":
-        return asset.status === "UNDER_MAINTENANCE";
-      case "DISPOSE":
-        return asset.status !== "RETIRED";
-      default:
-        return false;
-    }
-  };
 
   const holderTypesForSelected = formData.type
     ? (allowedHolderTypes[formData.type as MovementType] ?? [])
@@ -279,20 +173,23 @@ export default function NewMovementPage() {
     id: string;
     name: string;
     sub?: string;
+    address?: string;
   }> => {
-    switch (formData.toHolderType) {
+    switch (formData.toHolderType as HolderType) {
       case "CUSTOMER":
         return customers.map((c) => ({
           id: String(c.id),
           name: c.clients,
+          sub: c.customer_email,
+          address: typeof c.address === "string" ? c.address : "",
         }));
       case "VENDOR":
         return vendors.map((v) => ({
           id: v._id,
           name: v.name,
         }));
-      case "WAREHOUSE":
-        return [{ id: "wh1", name: "Main Warehouse" }];
+      case "STORE":
+        return [{ id: "store-1", name: "Main Store" }];
       default:
         return [];
     }
@@ -308,42 +205,43 @@ export default function NewMovementPage() {
     if (!formData.type) return;
     setFormData((prev) => ({
       ...prev,
-      toStatus: remainingStatus[formData.type as MovementType] ?? "",
+      toStatus: getRemainingStatus(
+        formData.type as MovementType,
+        asset?.status,
+      ),
       toHolderType: "",
       toHolderId: "",
       toHolderSnapshot: { id: "", name: "", email: "" },
+      toLocationId: "",
       toLocation: formData.type === "RELOCATE" ? prev.toLocation : "",
     }));
     setErrors({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.type]);
 
-  // ── Validation ─────────────────────────────────────────────────────────────
-
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!formData.type) e.type = "Movement type is required";
-    if (!formData.performedById)
-      e.performedById = "Select who performed this movement";
     if (isAssetRetired) e.general = "Cannot move a retired asset";
 
     if (formData.type === "RELOCATE") {
-      if (!formData.toLocation) e.toLocation = "Location is required";
+      if (!formData.toLocation && !formData.toLocationId)
+        e.toLocation = "Location is required";
       else if (formData.toLocation === asset?.location)
         e.toLocation = "Must differ from current location";
     }
     if (needsHolder) {
       if (!formData.toHolderType) e.toHolderType = "Holder type is required";
-      if (!formData.toHolderId) e.toHolderId = "Holder is required";
+      if (!formData.toHolderId) {
+        e.toHolderId = "Holder is required";
+      }
     }
-    if (needsLocation && !formData.toLocation) {
+    if (needsLocation && !formData.toLocation && !formData.toLocationId) {
       e.toLocation = "Location is required";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
-  // ── Submit ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,8 +251,6 @@ export default function NewMovementPage() {
       const payload = {
         asset: assetId,
         type: formData.type,
-        performedById: formData.performedById,
-        performedBySnapshot: formData.performedBySnapshot,
         ...(formData.toStatus && { toStatus: formData.toStatus }),
         ...(formData.toHolderType && { toHolderType: formData.toHolderType }),
         ...(formData.toHolderId && {
@@ -362,12 +258,13 @@ export default function NewMovementPage() {
           toHolderSnapshot: formData.toHolderSnapshot,
         }),
         ...(formData.toLocation && { toLocation: formData.toLocation }),
+        ...(formData.toLocationId && { toLocationId: formData.toLocationId }),
         ...(formData.reason && { reason: formData.reason }),
         ...(formData.performedAt && { performedAt: formData.performedAt }),
       };
       await inventoryAPI.createMovement(payload);
       toast.success("Movement recorded successfully");
-      router.push(`/assets/${assetId}`);
+      router.push(`/inventory/assets/${assetId}`);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
       toast.error(
@@ -387,8 +284,6 @@ export default function NewMovementPage() {
       return n;
     });
   };
-
-  // ── Loading ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -412,8 +307,6 @@ export default function NewMovementPage() {
   const selectedMeta = formData.type
     ? MOVEMENT_META[formData.type as MovementType]
     : null;
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -499,7 +392,11 @@ export default function NewMovementPage() {
             <div className="p-4 grid grid-cols-2 gap-2">
               {(Object.keys(MOVEMENT_META) as MovementType[]).map((type) => {
                 const meta = MOVEMENT_META[type];
-                const allowed = isAllowed(type);
+                const allowed = isAllowedMovement(
+                  type,
+                  asset?.status,
+                  isAssetRetired,
+                );
                 const selected = formData.type === type;
                 return (
                   <button
@@ -550,42 +447,8 @@ export default function NewMovementPage() {
               </div>
 
               <div className="p-5 space-y-5">
-                {/* Performed by + Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Performed By <span className="text-red-500">*</span>
-                    </label>
-                    <EmployeeCombobox
-                      employees={employees}
-                      value={
-                        employees.find(
-                          (emp) => String(emp.id) === formData.performedById,
-                        ) ?? null
-                      }
-                      onSelect={(emp) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          performedById: String(emp.id),
-                          performedBySnapshot: {
-                            id: String(emp.id),
-                            name: emp.name,
-                            email: "",
-                          },
-                        }));
-                        setErrors((prev) => {
-                          const n = { ...prev };
-                          delete n.performedById;
-                          return n;
-                        });
-                      }}
-                      onSearch={setEmployeeSearch}
-                      disabled={submitting}
-                      hasError={!!errors.performedById}
-                    />
-                    <FieldError msg={errors.performedById} />
-                  </div>
-
+                {/* Movement time */}
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1">
                       <Clock className="h-3 w-3" /> Date & Time
@@ -608,17 +471,51 @@ export default function NewMovementPage() {
                         : "Location"}{" "}
                       <span className="text-red-500">*</span>
                     </label>
-                    <Input
-                      value={formData.toLocation}
-                      onChange={(e) => set("toLocation")(e.target.value)}
-                      placeholder={
-                        formData.type === "RELOCATE"
-                          ? `Current: ${asset.location}`
-                          : "Enter location"
-                      }
-                      disabled={submitting}
-                      className={errors.toLocation ? "border-red-400" : ""}
-                    />
+                    {formData.toHolderType === "CUSTOMER" ? (
+                      <Input
+                        value={formData.toLocation}
+                        placeholder={"Customer address will appear here"}
+                        disabled
+                        className={errors.toLocation ? "border-red-400" : ""}
+                      />
+                    ) : (
+                      <div className="space-y-1.5">
+                        <LocationSelect
+                          label=""
+                          placeholder={
+                            formData.type === "RELOCATE"
+                              ? `Current: ${asset.location}`
+                              : "Search locations..."
+                          }
+                          allowedTypes={
+                            formData.toHolderType === "STORE"
+                              ? ["STORE"]
+                              : formData.toHolderType === "VENDOR"
+                                ? ["VENDOR_SITE"]
+                                : undefined
+                          }
+                          onSelect={(location) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              toLocationId: location?._id ?? "",
+                              toLocation: location?.name ?? "",
+                            }));
+                            setErrors((prev) => {
+                              const n = { ...prev };
+                              delete n.toLocation;
+                              return n;
+                            });
+                          }}
+                          disabled={submitting}
+                        />
+                        <Link
+                          href="/inventory/locations/create"
+                          className="text-xs text-blue-600 hover:text-blue-700 underline"
+                        >
+                          Create new location
+                        </Link>
+                      </div>
+                    )}
                     <FieldError msg={errors.toLocation} />
                   </div>
                 )}
@@ -637,6 +534,8 @@ export default function NewMovementPage() {
                             ...prev,
                             toHolderType: v,
                             toHolderId: "",
+                            toLocationId: "",
+                            toLocation: "",
                             toHolderSnapshot: { id: "", name: "", email: "" },
                           }));
                           setErrors((prev) => {
@@ -716,10 +615,18 @@ export default function NewMovementPage() {
                                   name: selected?.name ?? "",
                                   email: selected?.sub ?? "",
                                 },
+                                toLocation:
+                                  formData.toHolderType === "CUSTOMER"
+                                    ? (selected?.address ?? "")
+                                    : prev.toLocation,
+                                toLocationId: "",
                               }));
                               setErrors((prev) => {
                                 const n = { ...prev };
                                 delete n.toHolderId;
+                                if (formData.toHolderType === "CUSTOMER") {
+                                  delete n.toLocation;
+                                }
                                 return n;
                               });
                             }}

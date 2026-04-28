@@ -30,7 +30,7 @@ const assetMovementSchema = new mongoose.Schema(
 
     fromHolderType: {
       type: String,
-      enum: ["WAREHOUSE", "EMPLOYEE", "CUSTOMER", "VENDOR"],
+      enum: ["STORE", "EMPLOYEE", "CUSTOMER", "VENDOR"],
     },
 
     fromHolderId: {
@@ -50,7 +50,7 @@ const assetMovementSchema = new mongoose.Schema(
 
     toHolderType: {
       type: String,
-      enum: ["WAREHOUSE", "EMPLOYEE", "CUSTOMER", "VENDOR"],
+      enum: ["STORE", "EMPLOYEE", "CUSTOMER", "VENDOR"],
     },
 
     toHolderId: {

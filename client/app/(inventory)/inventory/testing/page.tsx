@@ -1,7 +1,7 @@
 import React from "react";
-import ProductList from "@/components/inventory/productList";
+import CategorySelect from "@/components/internal-requsitions/category/categoryList";
 function page() {
-  return <>page</>;
+  return <>{/* <CategorySelect /> */}</>;
 }
 
 export default page;

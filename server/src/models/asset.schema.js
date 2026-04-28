@@ -23,7 +23,7 @@ const assetSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["cpe", "noc", "pop", "other"],
+      enum: ["cpe", "noc", "pop", "store", "other"],
       default: "cpe",
     },
 
@@ -61,7 +61,7 @@ const assetSchema = new mongoose.Schema(
 
     holderType: {
       type: String,
-      enum: ["WAREHOUSE", "EMPLOYEE", "CUSTOMER", "VENDOR"],
+      enum: ["STORE", "EMPLOYEE", "CUSTOMER", "VENDOR"],
     },
 
     holder: {
@@ -82,6 +82,11 @@ const assetSchema = new mongoose.Schema(
     location: {
       type: String,
       default: "Main Warehouse",
+      index: true,
+    },
+    locationRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Location",
       index: true,
     },
 

@@ -4,8 +4,13 @@ import SupplierList from "../../../../components/internal-requsitions/suppliers/
 
 import { inventoryServerAPI } from "@/lib/inventory/inventoryApi.server";
 import { inventoryAPI } from "@/lib/inventoryApi";
-async function page() {
-  const suppliers = await inventoryServerAPI.getSuppliers();
+async function page({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const params = await searchParams;
+  const suppliers = await inventoryServerAPI.getSuppliers(params?.search);
   return <SupplierList suppliers={suppliers} />;
 }
 
