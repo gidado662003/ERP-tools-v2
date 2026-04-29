@@ -58,7 +58,7 @@ export default function MeetingPreviewCard({ meetings }: Props) {
         return (
           <Link
             key={meeting._id}
-            href={`/meeting-app/${meeting._id}`}
+            href={`/meeting-app/meeting/${meeting._id}`}
             className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 rounded-xl"
           >
             <div

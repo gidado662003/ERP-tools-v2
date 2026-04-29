@@ -2,7 +2,7 @@ const {
   getMeetings: getMeetingsService,
   getMeetingById: getMeetingByIdService,
   createMeeting: createMeetingService,
-} = require("../../services/meeting.service");
+} = require("./meeting.service");
 
 const getMeetings = async (req, res) => {
   try {
@@ -32,10 +32,12 @@ const getMeetingById = async (req, res) => {
 
 const createMeeting = async (req, res) => {
   try {
+    const user = req.user;
     const { meetingData, actionItemsData } = req.body;
     const { meeting, actionItems } = await createMeetingService({
       meetingData,
       actionItemsData,
+      department: user.department,
     });
 
     res.status(201).json({
@@ -46,6 +48,6 @@ const createMeeting = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}; 
+};
 
 module.exports = { getMeetings, getMeetingById, createMeeting };

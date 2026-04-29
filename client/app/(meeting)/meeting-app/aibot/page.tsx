@@ -296,11 +296,6 @@ function UseAiBot() {
                           placeholder: "e.g., Q3 Review",
                         },
                         { label: "Date", field: "date", type: "date" },
-                        {
-                          label: "Department",
-                          field: "department",
-                          placeholder: "e.g., IT, HR",
-                        },
                       ].map(({ label, field, type, placeholder }) => (
                         <div key={field} className="flex flex-col gap-1.5">
                           <label className={labelCls}>{label}</label>

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const Meeting = require("../models/meeting.schema");
-const ActionItem = require("../models/meetingActionItems.schema");
+const Meeting = require("../../models/meeting.schema");
+const ActionItem = require("../../models/meetingActionItems.schema");
 
 async function getMeetings(queryParams) {
   const { search, cursorTimestamp } = queryParams;
@@ -64,9 +64,16 @@ async function createMeeting(payload) {
   session.startTransaction();
 
   try {
-    const { meetingData, actionItemsData } = payload;
+    const { meetingData, actionItemsData, department } = payload;
+    console.log("🚀 ~ createMeeting ~ department:", department.name);
+    console.log("🚀 ~ createMeeting ~ meetingData:", meetingData);
 
-    const meeting = await Meeting.create([meetingData], { session });
+    const meeting = await Meeting.create(
+      [{ ...meetingData, department: department.name }],
+      {
+        session,
+      },
+    );
 
     let createdActionItems = [];
 
