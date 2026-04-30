@@ -261,7 +261,7 @@ function UseAiBot() {
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>Meeting Notes</label>
-                  {/* <TextArea
+                  <TextArea
                     value={description}
                     rows={10}
                     className={`${textareaCls} font-mono`}
@@ -271,7 +271,7 @@ function UseAiBot() {
                       setMentions(updatedMentions);
                       if (error) setError("");
                     }}
-                  /> */}
+                  />
                   <span className="text-[12px] text-[#80748d] dark:text-[#6b6080] text-right">
                     {description.length} characters
                   </span>

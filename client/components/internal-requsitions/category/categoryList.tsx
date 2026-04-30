@@ -81,6 +81,7 @@ function Category({ onSelect }: CategoryProps) {
                 No category found {search}
               </p>
               <button
+                disabled
                 onClick={() => setModalOpen(true)}
                 className="px-4 py-2 bg-[#3b5bdb] text-white rounded-md hover:bg-[#3451c7] transition-colors"
               >
