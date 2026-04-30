@@ -1,9 +1,20 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { getAllusers } from "@/app/api";
-import { Textarea } from "@/components/ui/textarea";
-function UserSelect({ search }: { search: string }) {
-  const [users, setUsers] = useState([]);
+
+export type User = {
+  _id: string;
+  username: string;
+};
+
+function UserSelect({
+  search,
+  onSelect,
+}: {
+  search: string;
+  onSelect: (username: string, userId: string) => void;
+}) {
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -16,13 +27,20 @@ function UserSelect({ search }: { search: string }) {
 
     fetchUsers();
   }, [search]);
-
+  if (!search) {
+    return null;
+  }
   return (
     <div>
       <div className="">
         <div>
           {users.map((user) => (
-            <div key={user.id}>{user.username}</div>
+            <div
+              onClick={() => onSelect(user.username, user._id)}
+              key={user._id}
+            >
+              {user.username}
+            </div>
           ))}
         </div>
       </div>

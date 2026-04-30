@@ -65,8 +65,6 @@ async function createMeeting(payload) {
 
   try {
     const { meetingData, actionItemsData, department } = payload;
-    console.log("🚀 ~ createMeeting ~ department:", department.name);
-    console.log("🚀 ~ createMeeting ~ meetingData:", meetingData);
 
     const meeting = await Meeting.create(
       [{ ...meetingData, department: department.name }],

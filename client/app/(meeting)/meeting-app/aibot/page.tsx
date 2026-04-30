@@ -7,10 +7,10 @@ import {
   Trash2,
   AlertCircle,
   RotateCcw,
-  CheckCircle2,
 } from "lucide-react";
 import { mettingAppAPI } from "@/lib/meeting/mettingAppApi";
 import { toast } from "sonner";
+import TextArea from "@/components/meeting-app/textArea";
 
 const DRAFT_KEY = "meeting_draft";
 
@@ -27,6 +27,7 @@ const selectCls =
 
 function UseAiBot() {
   const [description, setDescription] = useState("");
+  const [mentions, setMentions] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -71,12 +72,18 @@ function UseAiBot() {
     setActionItemsData([]);
     try {
       const response = await fetch(
-        "http://102.36.135.18:3000/n8n/webhook/ai-agent",
+        "http://102.36.135.18:3000/n8n/webhook-test/test",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            description,
+            description: {
+              body: description,
+              mentions: Object.entries(mentions).map(([username, id]) => ({
+                username,
+                id,
+              })),
+            },
             date: new Date().toISOString().split("T")[0],
           }),
         },
@@ -97,11 +104,7 @@ function UseAiBot() {
   const handleFieldChange = (field: string, value: any) =>
     setMeetingData((prev: any) => ({ ...prev, [field]: value }));
 
-  const handleActionItemChange = (
-    index: number,
-    field: string,
-    value: string,
-  ) =>
+  const handleActionItemChange = (index: number, field: string, value: any) =>
     setActionItemsData((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -114,7 +117,7 @@ function UseAiBot() {
       {
         desc: "",
         penalty: "N/A",
-        owner: "",
+        owner: [],
         due: new Date().toISOString().split("T")[0],
         status: "pending",
       },
@@ -127,12 +130,44 @@ function UseAiBot() {
     setIsSubmitting(true);
     setError("");
     try {
-      await mettingAppAPI.createMeeting({ meetingData, actionItemsData });
+      // Normalize attendees → [{ user, username }]
+      const normalizedAttendees = (meetingData.attendees || []).map(
+        (a: any) => {
+          if (typeof a === "object" && a.user) return a;
+          const username = typeof a === "object" ? a.username || "" : String(a);
+          const id = mentions[username] || "";
+          return { user: id, username };
+        },
+      );
+
+      // Normalize action item owners → [{ user, username }]
+      const normalizedActionItems = actionItemsData.map((item) => ({
+        ...item,
+        owner: (() => {
+          if (Array.isArray(item.owner) && item.owner.length > 0)
+            return item.owner;
+          if (typeof item.owner === "object" && item.owner?.user)
+            return [item.owner];
+          const username =
+            typeof item.owner === "string"
+              ? item.owner.replace("@", "").trim()
+              : "";
+          const id = mentions[username] || "";
+          return username ? [{ user: id, username }] : [];
+        })(),
+      }));
+
+      await mettingAppAPI.createMeeting({
+        meetingData: { ...meetingData, attendees: normalizedAttendees },
+        actionItemsData: normalizedActionItems,
+      });
+
       toast("Meeting submitted successfully!");
       localStorage.removeItem(DRAFT_KEY);
       setMeetingData(null);
       setActionItemsData([]);
       setDescription("");
+      setMentions({});
       setDraftRestored(false);
     } catch {
       setError("Failed to submit meeting data.");
@@ -146,6 +181,7 @@ function UseAiBot() {
     setMeetingData(null);
     setActionItemsData([]);
     setDescription("");
+    setMentions({});
     setError("");
     setDraftRestored(false);
   };
@@ -182,7 +218,7 @@ function UseAiBot() {
   );
 
   return (
-    <div className=" mx-auto">
+    <div className="mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-4 items-start">
         {/* ── Main card ── */}
         <div className="bg-white dark:bg-[#141320] border border-[#e0dfe3] dark:border-[#2a2535] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
@@ -225,16 +261,17 @@ function UseAiBot() {
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>Meeting Notes</label>
-                  <textarea
-                    rows={10}
-                    placeholder="Paste your meeting notes here..."
+                  {/* <TextArea
                     value={description}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
+                    rows={10}
+                    className={`${textareaCls} font-mono`}
+                    placeholder="Paste your meeting notes here, @mention attendees..."
+                    onChange={(value, updatedMentions) => {
+                      setDescription(value);
+                      setMentions(updatedMentions);
                       if (error) setError("");
                     }}
-                    className={`${textareaCls} font-mono`}
-                  />
+                  /> */}
                   <span className="text-[12px] text-[#80748d] dark:text-[#6b6080] text-right">
                     {description.length} characters
                   </span>
@@ -288,12 +325,18 @@ function UseAiBot() {
                 {/* Meeting Details */}
                 <Subcard title="Meeting Details">
                   <div className="space-y-3">
+                    {/* Title, Department, Date */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         {
                           label: "Meeting Title",
                           field: "title",
                           placeholder: "e.g., Q3 Review",
+                        },
+                        {
+                          label: "Department",
+                          field: "department",
+                          placeholder: "e.g., Engineering",
                         },
                         { label: "Date", field: "date", type: "date" },
                       ].map(({ label, field, type, placeholder }) => (
@@ -312,36 +355,60 @@ function UseAiBot() {
                       ))}
                     </div>
 
+                    {/* Attendees */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className={labelCls}>
+                        Attendees (comma-separated)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={
+                          Array.isArray(get("attendees"))
+                            ? get("attendees")
+                                .map((a: any) =>
+                                  typeof a === "object" ? a.username : a,
+                                )
+                                .join(", ")
+                            : get("attendees")
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value
+                            .split(",")
+                            .map((s: string) => s.trim())
+                            .filter(Boolean)
+                            .map((username) => {
+                              const existing = Array.isArray(get("attendees"))
+                                ? get("attendees").find(
+                                    (a: any) => a.username === username,
+                                  )
+                                : null;
+                              return (
+                                existing || {
+                                  user: mentions[username] || "",
+                                  username,
+                                }
+                              );
+                            });
+                          handleFieldChange("attendees", val);
+                        }}
+                        placeholder="Mr. John, Mrs. Smith"
+                        className={textareaCls}
+                      />
+                    </div>
+
+                    {/* Agenda & Minutes */}
                     {[
-                      {
-                        label: "Attendees (comma-separated)",
-                        field: "attendees",
-                        rows: 2,
-                        placeholder: "Mr. John, Mrs. Smith",
-                      },
                       { label: "Agenda", field: "agenda", rows: 3 },
                       { label: "Minutes", field: "minutes", rows: 4 },
-                    ].map(({ label, field, rows, placeholder }) => (
+                    ].map(({ label, field, rows }) => (
                       <div key={field} className="flex flex-col gap-1.5">
                         <label className={labelCls}>{label}</label>
                         <textarea
                           rows={rows}
-                          value={
-                            Array.isArray(get(field))
-                              ? get(field).join(", ")
-                              : get(field)
+                          value={get(field)}
+                          onChange={(e) =>
+                            handleFieldChange(field, e.target.value)
                           }
-                          onChange={(e) => {
-                            const val =
-                              field === "attendees"
-                                ? e.target.value
-                                    .split(",")
-                                    .map((s: string) => s.trim())
-                                    .filter(Boolean)
-                                : e.target.value;
-                            handleFieldChange(field, val);
-                          }}
-                          placeholder={placeholder}
                           className={textareaCls}
                         />
                       </div>
@@ -403,37 +470,55 @@ function UseAiBot() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {[
-                              {
-                                label: "Owner",
-                                field: "owner",
-                                placeholder: "Assign owner...",
-                              },
-                              { label: "Due Date", field: "due", type: "date" },
-                            ].map(({ label, field, type, placeholder }) => (
-                              <div
-                                key={field}
-                                className="flex flex-col gap-1.5"
-                              >
-                                <label className={labelCls}>{label}</label>
-                                <input
-                                  type={type || "text"}
-                                  value={item[field] || ""}
-                                  onChange={(e) =>
-                                    handleActionItemChange(
-                                      i,
-                                      field,
-                                      e.target.value,
-                                    )
-                                  }
-                                  placeholder={placeholder}
-                                  className={inputCls}
-                                />
-                              </div>
-                            ))}
+                            {/* Owner */}
+                            <div className="flex flex-col gap-1.5">
+                              <label className={labelCls}>Owner</label>
+                              <input
+                                type="text"
+                                value={
+                                  Array.isArray(item.owner)
+                                    ? item.owner
+                                        .map((o: any) => o.username)
+                                        .join(", ")
+                                    : typeof item.owner === "object" &&
+                                        item.owner !== null
+                                      ? item.owner.username || ""
+                                      : item.owner || ""
+                                }
+                                onChange={(e) => {
+                                  const username = e.target.value
+                                    .replace("@", "")
+                                    .trim();
+                                  const id = mentions[username] || "";
+                                  handleActionItemChange(i, "owner", [
+                                    { user: id, username },
+                                  ]);
+                                }}
+                                placeholder="Assign owner..."
+                                className={inputCls}
+                              />
+                            </div>
+
+                            {/* Due Date */}
+                            <div className="flex flex-col gap-1.5">
+                              <label className={labelCls}>Due Date</label>
+                              <input
+                                type="date"
+                                value={item.due || ""}
+                                onChange={(e) =>
+                                  handleActionItemChange(
+                                    i,
+                                    "due",
+                                    e.target.value,
+                                  )
+                                }
+                                className={inputCls}
+                              />
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* Status */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Status</label>
                               <select
@@ -452,6 +537,8 @@ function UseAiBot() {
                                 <option value="completed">Completed</option>
                               </select>
                             </div>
+
+                            {/* Penalty */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Penalty</label>
                               <input
@@ -493,6 +580,7 @@ function UseAiBot() {
             {[
               "Use full dates (e.g., October 15, 2025)",
               "Include titles before names (Mr, Mrs)",
+              "@mention attendees directly in notes",
               "Specify penalties clearly when mentioned",
               "List all attendees explicitly",
               "Use numbered points for action items",
