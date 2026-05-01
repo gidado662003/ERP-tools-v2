@@ -25,6 +25,23 @@ const labelCls = "text-[12px] font-medium text-[#3b3440] dark:text-[#a89cc0]";
 const selectCls =
   "w-full h-8 rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] px-3 text-[13px] text-[#1d1c21] dark:text-[#e4e0f0] outline-none transition-all focus:border-[#6c5fc7] focus:ring-[3px] focus:ring-[#6c5fc7]/10";
 
+function normalizeAttendee(a: any): { user: string; username: string } {
+  if (typeof a === "object" && a.user) return a;
+
+  return { user: a.id || "", username: a.username || String(a) };
+}
+
+function normalizeOwner(owner: any): { user: string; username: string }[] {
+  if (Array.isArray(owner)) {
+    if (owner.length === 0) return [];
+    return owner.map(normalizeAttendee);
+  }
+  if (typeof owner === "object" && owner !== null) {
+    return [normalizeAttendee(owner)];
+  }
+  return [];
+}
+
 function UseAiBot() {
   const [description, setDescription] = useState("");
   const [mentions, setMentions] = useState<Record<string, string>>({});
@@ -38,14 +55,14 @@ function UseAiBot() {
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
     if (saved) {
-      const { meetingData, actionItemsData, description } = JSON.parse(saved);
-      if (meetingData) {
-        setMeetingData(meetingData);
-        setActionItemsData(actionItemsData || []);
+      const parsed = JSON.parse(saved);
+      if (parsed.meetingData) {
+        setMeetingData(parsed.meetingData);
+        setActionItemsData(parsed.actionItemsData || []);
         setDraftRestored(true);
         toast.info("Restored your unsaved meeting draft.");
       }
-      if (description) setDescription(description);
+      if (parsed.description) setDescription(parsed.description);
     }
   }, []);
 
@@ -56,9 +73,9 @@ function UseAiBot() {
         DRAFT_KEY,
         JSON.stringify({ meetingData, actionItemsData, description }),
       );
-    }, 500);
+    }, 7000);
     return () => clearTimeout(timer);
-  }, [meetingData, actionItemsData, description]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +89,7 @@ function UseAiBot() {
     setActionItemsData([]);
     try {
       const response = await fetch(
-        "http://102.36.135.18:3000/n8n/webhook-test/test",
+        "https://gidado.app.n8n.cloud/webhook-test/test",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -92,8 +109,18 @@ function UseAiBot() {
       const data = await response.json();
       const processed = Array.isArray(data) ? data[0] : data;
       const { actionItems, ...rest } = processed;
-      setMeetingData(rest);
-      setActionItemsData(actionItems || []);
+
+      // Normalize IDs at parse time so the rest of the component is clean
+      setMeetingData({
+        ...rest,
+        attendees: (rest.attendees || []).map(normalizeAttendee),
+      });
+      setActionItemsData(
+        (actionItems || []).map((item: any) => ({
+          ...item,
+          owner: normalizeOwner(item.owner),
+        })),
+      );
     } catch {
       setError("Failed to process meeting. Please try again.");
     } finally {
@@ -130,38 +157,7 @@ function UseAiBot() {
     setIsSubmitting(true);
     setError("");
     try {
-      // Normalize attendees → [{ user, username }]
-      const normalizedAttendees = (meetingData.attendees || []).map(
-        (a: any) => {
-          if (typeof a === "object" && a.user) return a;
-          const username = typeof a === "object" ? a.username || "" : String(a);
-          const id = mentions[username] || "";
-          return { user: id, username };
-        },
-      );
-
-      // Normalize action item owners → [{ user, username }]
-      const normalizedActionItems = actionItemsData.map((item) => ({
-        ...item,
-        owner: (() => {
-          if (Array.isArray(item.owner) && item.owner.length > 0)
-            return item.owner;
-          if (typeof item.owner === "object" && item.owner?.user)
-            return [item.owner];
-          const username =
-            typeof item.owner === "string"
-              ? item.owner.replace("@", "").trim()
-              : "";
-          const id = mentions[username] || "";
-          return username ? [{ user: id, username }] : [];
-        })(),
-      }));
-
-      await mettingAppAPI.createMeeting({
-        meetingData: { ...meetingData, attendees: normalizedAttendees },
-        actionItemsData: normalizedActionItems,
-      });
-
+      await mettingAppAPI.createMeeting({ meetingData, actionItemsData });
       toast("Meeting submitted successfully!");
       localStorage.removeItem(DRAFT_KEY);
       setMeetingData(null);
@@ -186,7 +182,7 @@ function UseAiBot() {
     setDraftRestored(false);
   };
 
-  const get = (field: string) => meetingData?.[field] || "";
+  const get = (field: string) => meetingData?.[field] ?? "";
 
   const Subcard = ({
     title,
@@ -234,7 +230,6 @@ function UseAiBot() {
           </div>
 
           <div className="p-5">
-            {/* Error banner */}
             {error && (
               <div className="flex items-center gap-2 px-3 py-2.5 bg-[#fff5f5] dark:bg-[#2d1a1a] border border-[#f8d0d0] dark:border-[#5c2a2a] rounded-md text-[13px] text-[#c93a3a] mb-4">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -242,7 +237,6 @@ function UseAiBot() {
               </div>
             )}
 
-            {/* Draft restored banner */}
             {draftRestored && (
               <div className="flex items-center gap-2 px-3 py-2.5 bg-[#faf8ff] dark:bg-[#1e1a2e] border border-[#d4cef5] dark:border-[#3d3560] rounded-md text-[13px] text-[#6c5fc7] mb-4">
                 <RotateCcw className="h-3.5 w-3.5 shrink-0" />
@@ -325,7 +319,6 @@ function UseAiBot() {
                 {/* Meeting Details */}
                 <Subcard title="Meeting Details">
                   <div className="space-y-3">
-                    {/* Title, Department, Date */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         {
@@ -355,33 +348,26 @@ function UseAiBot() {
                       ))}
                     </div>
 
-                    {/* Attendees */}
+                    {/* Attendees — display usernames only; IDs are preserved in state */}
                     <div className="flex flex-col gap-1.5">
                       <label className={labelCls}>
                         Attendees (comma-separated)
                       </label>
                       <textarea
                         rows={2}
-                        value={
-                          Array.isArray(get("attendees"))
-                            ? get("attendees")
-                                .map((a: any) =>
-                                  typeof a === "object" ? a.username : a,
-                                )
-                                .join(", ")
-                            : get("attendees")
-                        }
+                        value={(get("attendees") as any[])
+                          .map((a: any) => a.username)
+                          .join(", ")}
                         onChange={(e) => {
-                          const val = e.target.value
+                          const updated = e.target.value
                             .split(",")
-                            .map((s: string) => s.trim())
+                            .map((s) => s.trim())
                             .filter(Boolean)
                             .map((username) => {
-                              const existing = Array.isArray(get("attendees"))
-                                ? get("attendees").find(
-                                    (a: any) => a.username === username,
-                                  )
-                                : null;
+                              // Preserve existing user ID if username unchanged
+                              const existing = (get("attendees") as any[]).find(
+                                (a: any) => a.username === username,
+                              );
                               return (
                                 existing || {
                                   user: mentions[username] || "",
@@ -389,14 +375,13 @@ function UseAiBot() {
                                 }
                               );
                             });
-                          handleFieldChange("attendees", val);
+                          handleFieldChange("attendees", updated);
                         }}
                         placeholder="Mr. John, Mrs. Smith"
                         className={textareaCls}
                       />
                     </div>
 
-                    {/* Agenda & Minutes */}
                     {[
                       { label: "Agenda", field: "agenda", rows: 3 },
                       { label: "Minutes", field: "minutes", rows: 4 },
@@ -470,28 +455,27 @@ function UseAiBot() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {/* Owner */}
+                            {/* Owner — display username(s), preserve IDs in state */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Owner</label>
                               <input
                                 type="text"
-                                value={
-                                  Array.isArray(item.owner)
-                                    ? item.owner
-                                        .map((o: any) => o.username)
-                                        .join(", ")
-                                    : typeof item.owner === "object" &&
-                                        item.owner !== null
-                                      ? item.owner.username || ""
-                                      : item.owner || ""
-                                }
+                                value={(item.owner as any[])
+                                  .map((o: any) => o.username)
+                                  .join(", ")}
                                 onChange={(e) => {
                                   const username = e.target.value
                                     .replace("@", "")
                                     .trim();
-                                  const id = mentions[username] || "";
+                                  // Preserve existing ID if username unchanged
+                                  const existing = (item.owner as any[]).find(
+                                    (o: any) => o.username === username,
+                                  );
                                   handleActionItemChange(i, "owner", [
-                                    { user: id, username },
+                                    existing || {
+                                      user: mentions[username] || "",
+                                      username,
+                                    },
                                   ]);
                                 }}
                                 placeholder="Assign owner..."
@@ -499,7 +483,6 @@ function UseAiBot() {
                               />
                             </div>
 
-                            {/* Due Date */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Due Date</label>
                               <input
@@ -518,7 +501,6 @@ function UseAiBot() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {/* Status */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Status</label>
                               <select
@@ -538,7 +520,6 @@ function UseAiBot() {
                               </select>
                             </div>
 
-                            {/* Penalty */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Penalty</label>
                               <input

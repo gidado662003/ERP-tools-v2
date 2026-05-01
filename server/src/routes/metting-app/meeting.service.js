@@ -60,6 +60,7 @@ async function getMeetingById(id) {
 }
 
 async function createMeeting(payload) {
+  console.log("🚀 ~ createMeeting ~ payload:", payload);
   const session = await mongoose.startSession();
   session.startTransaction();
 
