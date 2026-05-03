@@ -3,7 +3,7 @@ import React from "react";
 import MeetingAppSidebar from "@/components/meeting-app/meeting-app-sidebar";
 import Link from "next/link";
 import IconRailSidebar from "@/components/railSidebar";
-import { LayoutDashboard, Bot, ListChecks } from "lucide-react";
+import { LayoutDashboard, Bot, ListChecks, ActivityIcon } from "lucide-react";
 
 function MeetingLayout({ children }: { children: React.ReactNode }) {
   const sidebarItems = [
@@ -16,6 +16,11 @@ function MeetingLayout({ children }: { children: React.ReactNode }) {
       href: "/meeting-app/meeting-list",
       label: "Meetings",
       icon: ListChecks,
+    },
+    {
+      href: "/meeting-app/actionItems",
+      label: "Actions",
+      icon: ActivityIcon,
     },
     {
       href: "/meeting-app/aibot",

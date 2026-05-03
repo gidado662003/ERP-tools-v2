@@ -49,7 +49,7 @@ const meetingSchema = new Schema(
     status: {
       type: String,
       enum: ["scheduled", "completed", "cancelled"],
-      default: "scheduled",
+      default: "completed",
     },
   },
   {

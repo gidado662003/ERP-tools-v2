@@ -22,8 +22,6 @@ export type Supplier = {
   };
 };
 
-// exporting the type makes it easier to reuse elsewhere (e.g. inventoryApi.ts)
-
 type SuppliersListProps = {
   value: Supplier | null;
   onSelect: (supplier: Supplier) => void;
@@ -33,8 +31,7 @@ function SuppliersList({ value, onSelect }: SuppliersListProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [reloadFlag, setReloadFlag] = useState(false); // flag to trigger reload after adding supplier
-  /* ---------------- FETCH WITH DEBOUNCE ---------------- */
+  const [reloadFlag, setReloadFlag] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -50,9 +47,7 @@ function SuppliersList({ value, onSelect }: SuppliersListProps) {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, reloadFlag]); // also refetch when reloadFlag changes
-
-  // Keep the input text in sync with the externally controlled value
+  }, [search, reloadFlag]);
   useEffect(() => {
     if (value) {
       setSearch(value.name);

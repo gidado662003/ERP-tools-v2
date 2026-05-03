@@ -20,7 +20,6 @@ export const productApi = {
     }
   },
   getProductByName: async (name: string) => {
-    console.log("🚀 ~ name:", name);
     try {
       const response = await api.get("/products/name", {
         params: { name: name },

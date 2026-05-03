@@ -11,22 +11,37 @@ import {
   AlertCircle,
   ChevronDown,
   Edit3,
+  User,
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import UserCard from "@/components/user/getMinamUserdetails";
+
+interface AttendeeRef {
+  user: string;
+  username: string;
+  _id: string;
+}
 
 interface ActionItem {
   _id: string;
+  meetingId: string;
   desc: string;
-  penalty: string;
-  owner: string;
+  owner: AttendeeRef[];
   due: string;
   status: "pending" | "completed" | "overdue";
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Meeting {
   _id: string;
   title: string;
   date: string;
-  attendees: string[];
+  attendees: AttendeeRef[];
   agenda: string;
   minutes: string;
   department: string;
@@ -36,7 +51,7 @@ interface Meeting {
   updatedAt: string;
 }
 
-const STATUS_STYLES = {
+const STATUS_STYLES: Record<ActionItem["status"], string> = {
   completed:
     "bg-[#eaf3de] dark:bg-[#1a3010] text-[#3b6d11] dark:text-[#8fcf52] border border-[#c0dd97] dark:border-[#3b6d11]",
   pending:
@@ -45,7 +60,7 @@ const STATUS_STYLES = {
     "bg-[#fcebeb] dark:bg-[#2d1010] text-[#a32d2d] dark:text-[#e87070] border border-[#f7c1c1] dark:border-[#a32d2d]",
 };
 
-const STATUS_ICONS = {
+const STATUS_ICONS: Record<ActionItem["status"], React.ReactNode> = {
   completed: <CheckCircle2 className="h-3 w-3" />,
   pending: <Clock className="h-3 w-3" />,
   overdue: <AlertCircle className="h-3 w-3" />,
@@ -57,6 +72,9 @@ const formatDate = (d: string) =>
     month: "long",
     day: "numeric",
   });
+
+const capitalize = (s: string) =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
 function Card({
   children,
@@ -110,7 +128,7 @@ function InfoTile({
         <p className="text-[11px] text-[#80748d] dark:text-[#6b6080]">
           {label}
         </p>
-        <p className="text-[13px] font-600 text-[#1d1c21] dark:text-[#e4e0f0]">
+        <p className="text-[13px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
           {value}
         </p>
       </div>
@@ -118,10 +136,33 @@ function InfoTile({
   );
 }
 
+function AttendeeChip({ username, id }: { username: string; id?: string }) {
+  // Generate a consistent initial avatar color from username
+  const colors = [
+    "bg-[#eeedfe] dark:bg-[#1e1a2e] text-[#534ab7] dark:text-[#a89cc0] border-[#d4cef5] dark:border-[#3d3560]",
+    "bg-[#eaf3de] dark:bg-[#1a3010] text-[#3b6d11] dark:text-[#8fcf52] border-[#c0dd97] dark:border-[#3b6d11]",
+    "bg-[#faeeda] dark:bg-[#2e1f08] text-[#854f0b] dark:text-[#e8a840] border-[#fac775] dark:border-[#854f0b]",
+    "bg-[#fcebeb] dark:bg-[#2d1010] text-[#a32d2d] dark:text-[#e87070] border-[#f7c1c1] dark:border-[#a32d2d]",
+  ];
+  const colorClass = colors[username.charCodeAt(0) % colors.length];
+
+  return (
+    <span
+      className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium border ${colorClass}`}
+    >
+      <User className="h-3 w-3 shrink-0" />
+      {username}
+    </span>
+  );
+}
+
 function ActionCard({ item, index }: { item: ActionItem; index: number }) {
   const [open, setOpen] = useState(false);
+  const ownerNames = item.owner.map((o) => o.username).join(", ");
+
   return (
     <div className="border border-[#e0dfe3] dark:border-[#2a2535] rounded-md overflow-hidden">
+      {/* Summary row */}
       <button
         onClick={() => setOpen((p) => !p)}
         className="w-full text-left p-3 hover:bg-[#faf9ff] dark:hover:bg-[#1e1a2e] transition-colors"
@@ -131,7 +172,9 @@ function ActionCard({ item, index }: { item: ActionItem; index: number }) {
             {index + 1}
           </span>
           <ChevronDown
-            className={`h-3.5 w-3.5 text-[#80748d] transition-transform ${open ? "rotate-180" : ""}`}
+            className={`h-3.5 w-3.5 text-[#80748d] transition-transform duration-200 ${
+              open ? "rotate-180" : ""
+            }`}
           />
         </div>
         <p className="text-[13px] font-medium text-[#1d1c21] dark:text-[#e4e0f0] leading-snug mb-2.5">
@@ -139,37 +182,56 @@ function ActionCard({ item, index }: { item: ActionItem; index: number }) {
         </p>
         <div className="flex flex-wrap gap-1.5 items-center">
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_STYLES[item.status]}`}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+              STATUS_STYLES[item.status]
+            }`}
           >
             {STATUS_ICONS[item.status]}
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            {capitalize(item.status)}
           </span>
           <span className="text-[12px] text-[#80748d] dark:text-[#6b6080]">
-            {item.owner}
-          </span>
-          <span className="text-[12px] text-[#80748d] dark:text-[#6b6080]">
-            Due {formatDate(item.due)}
+            {ownerNames}
           </span>
         </div>
       </button>
 
+      {/* Expanded detail */}
       {open && (
-        <div className="border-t border-[#e0dfe3] dark:border-[#2a2535] px-3 py-2.5 bg-[#faf9fb] dark:bg-[#1a1825] space-y-1.5">
-          {[
-            { label: "Task ID", value: item._id, mono: true },
-            { label: "Penalty", value: item.penalty || "—" },
-          ].map(({ label, value, mono }) => (
-            <div key={label} className="flex justify-between text-[12px]">
-              <span className="text-[#80748d] dark:text-[#6b6080]">
-                {label}
-              </span>
-              <span
-                className={`text-[#1d1c21] dark:text-[#e4e0f0] font-medium ${mono ? "font-mono text-[11px] text-[#6c5fc7]" : ""}`}
-              >
-                {value}
-              </span>
+        <div className="border-t border-[#e0dfe3] dark:border-[#2a2535] px-3 py-2.5 bg-[#faf9fb] dark:bg-[#1a1825] space-y-2">
+          {/* Owners */}
+          <div className="flex justify-between items-start text-[12px]">
+            <span className="text-[#80748d] dark:text-[#6b6080] shrink-0 mr-3">
+              Owner{item.owner.length > 1 ? "s" : ""}
+            </span>
+            <div className="flex flex-wrap gap-1 justify-end">
+              {item.owner.map((o) => (
+                <HoverCard openDelay={100} closeDelay={200} key={o._id}>
+                  <HoverCardTrigger>
+                    <AttendeeChip username={o.username} />
+                  </HoverCardTrigger>
+                  <HoverCardContent side="top" align="center">
+                    <UserCard userId={o.user} />
+                  </HoverCardContent>
+                </HoverCard>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Due date */}
+          <div className="flex justify-between text-[12px]">
+            <span className="text-[#80748d] dark:text-[#6b6080]">Due</span>
+            <span className="text-[#1d1c21] dark:text-[#e4e0f0] font-medium">
+              {formatDate(item.due)}
+            </span>
+          </div>
+
+          {/* Task ID */}
+          <div className="flex justify-between text-[12px]">
+            <span className="text-[#80748d] dark:text-[#6b6080]">Task ID</span>
+            <span className="font-mono text-[11px] text-[#6c5fc7]">
+              {item._id}
+            </span>
+          </div>
         </div>
       )}
     </div>
@@ -213,8 +275,8 @@ function Page() {
   }
 
   return (
-    <div className=" mx-auto space-y-4">
-      {/* Meta bar */}
+    <div className="mx-auto space-y-4">
+      {/* ── Meta bar ── */}
       <Card>
         <div className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -230,6 +292,7 @@ function Page() {
               </span>
             </div>
           </div>
+
           <div className="flex gap-3 flex-wrap">
             <InfoTile
               icon={<Calendar className="h-3.5 w-3.5" />}
@@ -239,31 +302,38 @@ function Page() {
             <InfoTile
               icon={<Users className="h-3.5 w-3.5" />}
               label="Attendees"
-              value={`${data.attendees.length} participants`}
+              value={`${data.attendees.length} participant${data.attendees.length !== 1 ? "s" : ""}`}
             />
           </div>
         </div>
       </Card>
 
-      {/* Attendees */}
+      {/* ── Attendees ── */}
       <Card>
         <CardHeader
           title="Attendees"
           icon={<Users className="h-3.5 w-3.5" />}
+          right={
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#f6f6f7] dark:bg-[#1a1825] text-[#80748d] dark:text-[#6b6080] border border-[#e0dfe3] dark:border-[#2a2535]">
+              {data.attendees.length}
+            </span>
+          }
         />
         <div className="p-4 flex flex-wrap gap-2">
           {data.attendees.map((a) => (
-            <span
-              key={a}
-              className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-[#eeedfe] dark:bg-[#1e1a2e] text-[#534ab7] dark:text-[#a89cc0] border border-[#d4cef5] dark:border-[#3d3560]"
-            >
-              {a}
-            </span>
+            <HoverCard openDelay={100} closeDelay={200} key={a._id}>
+              <HoverCardTrigger>
+                <AttendeeChip username={a.username} />
+              </HoverCardTrigger>
+              <HoverCardContent side="top" align="center">
+                <UserCard userId={a.user} />
+              </HoverCardContent>
+            </HoverCard>
           ))}
         </div>
       </Card>
 
-      {/* Agenda + Minutes */}
+      {/* ── Agenda + Minutes ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader
@@ -290,14 +360,15 @@ function Page() {
         </Card>
       </div>
 
-      {/* Action Items */}
+      {/* ── Action Items ── */}
       <Card>
         <CardHeader
           title="Action Items"
           icon={<CheckCircle2 className="h-3.5 w-3.5" />}
           right={
             <span className="px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#eeedfe] dark:bg-[#1e1a2e] text-[#534ab7] dark:text-[#a89cc0] border border-[#d4cef5] dark:border-[#3d3560]">
-              {data.actionItems.length} tasks
+              {data.actionItems.length} task
+              {data.actionItems.length !== 1 ? "s" : ""}
             </span>
           }
         />

@@ -54,8 +54,6 @@ function page() {
         }),
       },
     );
-
-    console.log("Sending to server:", payload);
   };
 
   return (

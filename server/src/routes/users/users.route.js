@@ -6,7 +6,6 @@ const {
   isAuthenticated,
 } = require("./users.controller");
 
-
 const route = express.Router();
 
 // Sync user profile with Laravel token (protected by Sanctum middleware)

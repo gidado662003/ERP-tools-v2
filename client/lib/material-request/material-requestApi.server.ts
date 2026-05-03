@@ -1,10 +1,6 @@
 // lib/material-request/material-requestApi.server.ts
 
 import { cookies } from "next/headers";
-import {
-  MaterialRequest,
-  MaterialRequestResponse,
-} from "./material-requestType";
 
 const SERVER_API_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:5001/api";
 

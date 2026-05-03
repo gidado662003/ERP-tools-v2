@@ -62,7 +62,6 @@ function RejectModal({
 
 // ── Main Component
 function RequestById({ data }: { data: PopulatedMaterialRequest }) {
-  console.log("🚀 ~ RequestById ~ data:", data);
   const [status, setStatus] = useState(data.status);
   const [loading, setLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);

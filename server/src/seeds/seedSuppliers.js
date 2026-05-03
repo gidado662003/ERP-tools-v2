@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Supplier = require("./models/supplier.schema");
+const Supplier = require("../models/supplier.schema");
 
 const suppliers = [
   "E STEVE NIGERIA ENTERPRISES",

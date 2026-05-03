@@ -14,7 +14,6 @@ const productController = {
   getProductByName: async (req, res) => {
     try {
       const { name } = req.query;
-      console.log("🚀 ~ name:", req.query);
       if (!name) {
         return res
           .status(400)

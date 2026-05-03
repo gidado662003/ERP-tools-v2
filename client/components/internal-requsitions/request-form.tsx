@@ -30,7 +30,6 @@ function RequestForm({
     React.SetStateAction<CreateRequisitionPayload>
   >;
 }) {
-  console.log("🚀 ~ RequestForm ~ formData:", formData);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const Locations = [
     { value: "Ikeja", label: "Ikeja" },

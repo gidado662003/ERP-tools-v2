@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Loader2,
   ClipboardList,
@@ -11,6 +11,12 @@ import {
 import { mettingAppAPI } from "@/lib/meeting/mettingAppApi";
 import { toast } from "sonner";
 import TextArea from "@/components/meeting-app/textArea";
+import AttendeeSelector, {
+  Attendee,
+} from "@/components/meeting-app/attendeesSection";
+import UnmentionedWarning from "@/components/meeting-app/unmentioned";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const DRAFT_KEY = "meeting_draft";
 
@@ -25,26 +31,66 @@ const labelCls = "text-[12px] font-medium text-[#3b3440] dark:text-[#a89cc0]";
 const selectCls =
   "w-full h-8 rounded-md border border-[#e0dfe3] dark:border-[#3a3540] bg-white dark:bg-[#1a1825] px-3 text-[13px] text-[#1d1c21] dark:text-[#e4e0f0] outline-none transition-all focus:border-[#6c5fc7] focus:ring-[3px] focus:ring-[#6c5fc7]/10";
 
-function normalizeAttendee(a: any): { user: string; username: string } {
-  if (typeof a === "object" && a.user) return a;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  return { user: a.id || "", username: a.username || String(a) };
+function normalizeAttendee(a: any): Attendee {
+  if (typeof a === "object" && a.user !== undefined) return a;
+  return { user: a._id || "", username: a.username || String(a) };
 }
 
-function normalizeOwner(owner: any): { user: string; username: string }[] {
-  if (Array.isArray(owner)) {
-    if (owner.length === 0) return [];
-    return owner.map(normalizeAttendee);
-  }
-  if (typeof owner === "object" && owner !== null) {
+function normalizeOwner(owner: any): Attendee[] {
+  if (Array.isArray(owner)) return owner.map(normalizeAttendee);
+  if (typeof owner === "object" && owner !== null)
     return [normalizeAttendee(owner)];
-  }
   return [];
 }
 
+// ─── Subcard ──────────────────────────────────────────────────────────────────
+
+function Subcard({
+  title,
+  subtitle,
+  action,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-[#e0dfe3] dark:border-[#2a2535] rounded-md">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e0dfe3] dark:border-[#2a2535]">
+        <div>
+          <p className="text-[13px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
+            {title}
+          </p>
+          {subtitle && (
+            <p className="text-[12px] text-[#80748d] dark:text-[#6b6080] mt-0.5">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {action}
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 function UseAiBot() {
   const [description, setDescription] = useState("");
+  // mentions map: username → id, populated by TextArea's @mention lookup
   const [mentions, setMentions] = useState<Record<string, string>>({});
+  // attendees explicitly selected before parsing
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  // usernames the user dismissed from the unmentioned warning
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(
+    new Set(),
+  );
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -52,30 +98,72 @@ function UseAiBot() {
   const [actionItemsData, setActionItemsData] = useState<any[]>([]);
   const [draftRestored, setDraftRestored] = useState(false);
 
+  // ── Draft restore ──
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.meetingData) {
-        setMeetingData(parsed.meetingData);
-        setActionItemsData(parsed.actionItemsData || []);
-        setDraftRestored(true);
-        toast.info("Restored your unsaved meeting draft.");
-      }
-      if (parsed.description) setDescription(parsed.description);
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.meetingData) {
+          setMeetingData(parsed.meetingData);
+          setActionItemsData(parsed.actionItemsData || []);
+          setDraftRestored(true);
+          toast.info("Restored your unsaved meeting draft.");
+        }
+        if (parsed.description) setDescription(parsed.description);
+        if (parsed.attendees) setAttendees(parsed.attendees);
+      } catch {}
     }
   }, []);
 
   useEffect(() => {
-    if (!meetingData && !description) return;
+    if (!meetingData && !description && attendees.length === 0) return;
     const timer = setTimeout(() => {
       localStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ meetingData, actionItemsData, description }),
+        JSON.stringify({
+          meetingData,
+          actionItemsData,
+          description,
+          attendees,
+        }),
       );
     }, 7000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [meetingData, actionItemsData, description, attendees]);
+
+  const searchUsers = useCallback(
+    async (query: string): Promise<Attendee[]> => {
+      try {
+        const res = await fetch(
+          `
+http://localhost:5001/api/user?search=${encodeURIComponent(query)}`,
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.data.users || data || []).map(normalizeAttendee);
+      } catch {
+        return [];
+      }
+    },
+    [],
+  );
+
+  const unmentionedUsers: Attendee[] = Object.entries(mentions)
+    .filter(([username]) => {
+      const inAttendees = attendees.some((a) => a.username === username);
+      const dismissed = dismissedWarnings.has(username);
+      return !inAttendees && !dismissed;
+    })
+    .map(([username, id]) => ({ user: id, username }));
+
+  const handleAddFromWarning = (attendee: Attendee) => {
+    setAttendees((prev) => [...prev, attendee]);
+  };
+
+  const handleDismissWarning = (username: string) => {
+    setDismissedWarnings((prev) => new Set([...prev, username]));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +189,7 @@ function UseAiBot() {
                 id,
               })),
             },
+            attendees,
             date: new Date().toISOString().split("T")[0],
           }),
         },
@@ -110,11 +199,19 @@ function UseAiBot() {
       const processed = Array.isArray(data) ? data[0] : data;
       const { actionItems, ...rest } = processed;
 
-      // Normalize IDs at parse time so the rest of the component is clean
-      setMeetingData({
-        ...rest,
-        attendees: (rest.attendees || []).map(normalizeAttendee),
+      // Merge AI-returned attendees with the ones explicitly selected,
+      // preferring explicit selections (which carry resolved IDs)
+      const aiAttendees: Attendee[] = (rest.attendees || []).map(
+        normalizeAttendee,
+      );
+      const mergedAttendees = [...attendees];
+      aiAttendees.forEach((ai) => {
+        if (!mergedAttendees.some((a) => a.username === ai.username)) {
+          mergedAttendees.push(ai);
+        }
       });
+
+      setMeetingData({ ...rest, attendees: mergedAttendees });
       setActionItemsData(
         (actionItems || []).map((item: any) => ({
           ...item,
@@ -128,6 +225,7 @@ function UseAiBot() {
     }
   };
 
+  // ── Field helpers ──
   const handleFieldChange = (field: string, value: any) =>
     setMeetingData((prev: any) => ({ ...prev, [field]: value }));
 
@@ -153,6 +251,7 @@ function UseAiBot() {
   const removeActionItem = (index: number) =>
     setActionItemsData((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Final submit ──
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     setError("");
@@ -160,11 +259,7 @@ function UseAiBot() {
       await mettingAppAPI.createMeeting({ meetingData, actionItemsData });
       toast("Meeting submitted successfully!");
       localStorage.removeItem(DRAFT_KEY);
-      setMeetingData(null);
-      setActionItemsData([]);
-      setDescription("");
-      setMentions({});
-      setDraftRestored(false);
+      resetForm();
     } catch {
       setError("Failed to submit meeting data.");
     } finally {
@@ -178,40 +273,15 @@ function UseAiBot() {
     setActionItemsData([]);
     setDescription("");
     setMentions({});
+    setAttendees([]);
+    setDismissedWarnings(new Set());
     setError("");
     setDraftRestored(false);
   };
 
   const get = (field: string) => meetingData?.[field] ?? "";
 
-  const Subcard = ({
-    title,
-    subtitle,
-    action,
-    children,
-  }: {
-    title: string;
-    subtitle?: string;
-    action?: React.ReactNode;
-    children: React.ReactNode;
-  }) => (
-    <div className="border border-[#e0dfe3] dark:border-[#2a2535] rounded-md">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e0dfe3] dark:border-[#2a2535]">
-        <div>
-          <p className="text-[13px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
-            {title}
-          </p>
-          {subtitle && (
-            <p className="text-[12px] text-[#80748d] dark:text-[#6b6080] mt-0.5">
-              {subtitle}
-            </p>
-          )}
-        </div>
-        {action}
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  );
+  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="mx-auto">
@@ -250,9 +320,27 @@ function UseAiBot() {
               </div>
             )}
 
-            {/* ── Step 1: Input ── */}
+            {/* ══ Step 1: Input ══ */}
             {!meetingData ? (
-              <form onSubmit={handleSubmit} className="space-y-3">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Attendees selector */}
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>
+                    Attendees
+                    {attendees.length > 0 && (
+                      <span className="ml-1.5 text-[11px] font-normal text-[#80748d] dark:text-[#6b6080]">
+                        {attendees.length} selected
+                      </span>
+                    )}
+                  </label>
+                  <AttendeeSelector
+                    value={attendees}
+                    onChange={setAttendees}
+                    searchUsers={searchUsers}
+                  />
+                </div>
+
+                {/* Meeting notes */}
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>Meeting Notes</label>
                   <TextArea
@@ -270,6 +358,14 @@ function UseAiBot() {
                     {description.length} characters
                   </span>
                 </div>
+
+                {/* Unmentioned warnings */}
+                <UnmentionedWarning
+                  unmentioned={unmentionedUsers}
+                  onAdd={handleAddFromWarning}
+                  onDismiss={handleDismissWarning}
+                />
+
                 <button
                   type="submit"
                   disabled={isLoading || !description.trim()}
@@ -286,7 +382,7 @@ function UseAiBot() {
                 </button>
               </form>
             ) : (
-              /* ── Step 2: Review ── */
+              /* ══ Step 2: Review ══ */
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[14px] font-semibold text-[#1d1c21] dark:text-[#e4e0f0]">
@@ -348,37 +444,22 @@ function UseAiBot() {
                       ))}
                     </div>
 
-                    {/* Attendees — display usernames only; IDs are preserved in state */}
+                    {/* Attendees — chip picker in edit mode */}
                     <div className="flex flex-col gap-1.5">
                       <label className={labelCls}>
-                        Attendees (comma-separated)
+                        Attendees
+                        {(get("attendees") as Attendee[]).length > 0 && (
+                          <span className="ml-1.5 text-[11px] font-normal text-[#80748d] dark:text-[#6b6080]">
+                            {(get("attendees") as Attendee[]).length} selected
+                          </span>
+                        )}
                       </label>
-                      <textarea
-                        rows={2}
-                        value={(get("attendees") as any[])
-                          .map((a: any) => a.username)
-                          .join(", ")}
-                        onChange={(e) => {
-                          const updated = e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                            .map((username) => {
-                              // Preserve existing user ID if username unchanged
-                              const existing = (get("attendees") as any[]).find(
-                                (a: any) => a.username === username,
-                              );
-                              return (
-                                existing || {
-                                  user: mentions[username] || "",
-                                  username,
-                                }
-                              );
-                            });
-                          handleFieldChange("attendees", updated);
-                        }}
-                        placeholder="Mr. John, Mrs. Smith"
-                        className={textareaCls}
+                      <AttendeeSelector
+                        value={get("attendees") as Attendee[]}
+                        onChange={(updated) =>
+                          handleFieldChange("attendees", updated)
+                        }
+                        searchUsers={searchUsers}
                       />
                     </div>
 
@@ -455,31 +536,28 @@ function UseAiBot() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {/* Owner — display username(s), preserve IDs in state */}
+                            {/* Owner — chip picker backed by meeting attendees */}
                             <div className="flex flex-col gap-1.5">
                               <label className={labelCls}>Owner</label>
-                              <input
-                                type="text"
-                                value={(item.owner as any[])
-                                  .map((o: any) => o.username)
-                                  .join(", ")}
-                                onChange={(e) => {
-                                  const username = e.target.value
-                                    .replace("@", "")
-                                    .trim();
-                                  // Preserve existing ID if username unchanged
-                                  const existing = (item.owner as any[]).find(
-                                    (o: any) => o.username === username,
+                              <AttendeeSelector
+                                value={item.owner as Attendee[]}
+                                onChange={(updated) =>
+                                  handleActionItemChange(i, "owner", updated)
+                                }
+                                searchUsers={async (q) => {
+                                  // Search within attendees first, then fall back to API
+                                  const currentAttendees = get(
+                                    "attendees",
+                                  ) as Attendee[];
+                                  const local = currentAttendees.filter((a) =>
+                                    a.username
+                                      .toLowerCase()
+                                      .includes(q.toLowerCase()),
                                   );
-                                  handleActionItemChange(i, "owner", [
-                                    existing || {
-                                      user: mentions[username] || "",
-                                      username,
-                                    },
-                                  ]);
+                                  if (local.length > 0) return local;
+                                  return searchUsers(q);
                                 }}
-                                placeholder="Assign owner..."
-                                className={inputCls}
+                                placeholder="Assign owner…"
                               />
                             </div>
 
@@ -562,8 +640,8 @@ function UseAiBot() {
               "Use full dates (e.g., October 15, 2025)",
               "Include titles before names (Mr, Mrs)",
               "@mention attendees directly in notes",
+              "Select attendees above before parsing",
               "Specify penalties clearly when mentioned",
-              "List all attendees explicitly",
               "Use numbered points for action items",
             ].map((tip) => (
               <li

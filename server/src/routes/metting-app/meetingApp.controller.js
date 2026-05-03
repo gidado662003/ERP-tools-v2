@@ -2,6 +2,9 @@ const {
   getMeetings: getMeetingsService,
   getMeetingById: getMeetingByIdService,
   createMeeting: createMeetingService,
+  getActionItem: getActionItemService,
+  getDashboardData: getDashboardDataService,
+  updateActionItemStatus: updateActionItemStatusService,
 } = require("./meeting.service");
 
 const getMeetings = async (req, res) => {
@@ -50,4 +53,45 @@ const createMeeting = async (req, res) => {
   }
 };
 
-module.exports = { getMeetings, getMeetingById, createMeeting };
+const getDashboardData = async (req, res) => {
+  try {
+    const { date } = req.query;
+    const { department } = req.user;
+    const user = req.user;
+    const meeting = await getDashboardDataService(date ?? "", department.name);
+    res.status(200).json(meeting);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getActionItems = async (req, res) => {
+  try {
+    const user = req.user;
+    const query = req.query;
+    const actionItems = await getActionItemService(user, query);
+    res.status(200).json({ success: true, actionItems });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateActionItemStatus = async (req, res) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const response = await updateActionItemStatusService(user, id);
+    res.status(200).json({ success: true, response });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getMeetings,
+  getMeetingById,
+  createMeeting,
+  getDashboardData,
+  getActionItems,
+  updateActionItemStatus,
+};

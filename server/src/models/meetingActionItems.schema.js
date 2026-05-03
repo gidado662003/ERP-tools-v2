@@ -21,8 +21,14 @@ const actionItemSchema = new Schema(
     due: { type: Date, required: true },
     status: {
       type: String,
-      enum: ["pending", "completed"],
+      enum: ["pending", "completed", "ongoing"],
       default: "pending",
+    },
+    penalty: {
+      type: String,
+    },
+    completedAt: {
+      type: Date,
     },
   },
   { timestamps: true },

@@ -40,8 +40,8 @@ export const inventoryServerAPI = {
     return data.data;
   },
 
-  getAssets: async (): Promise<Asset[]> => {
-    return serverFetch<Asset[]>("/asset");
+  getAssets: async (): Promise<AssetGroup[]> => {
+    return serverFetch<AssetGroup[]>("/asset");
   },
 
   getAssetsByID: async (assetId: string): Promise<Asset> => {

@@ -29,7 +29,6 @@ const initialState: FormState = {
 
 function NewBatch({ onCancel }: { onCancel?: () => void }) {
   const [form, setForm] = useState<FormState>(initialState);
-  console.log("🚀 ~ NewBatch ~ form:", form);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

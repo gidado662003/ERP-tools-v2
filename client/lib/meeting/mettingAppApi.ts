@@ -32,4 +32,28 @@ export const mettingAppAPI = {
     });
     return response.data;
   },
+  getDashboardData: async ({
+    dateQuery,
+  }: {
+    dateQuery: { startDate: string; endDate: string };
+  }) => {
+    const response = await mettingAppApi.get(`/meeting/dashboard`, {
+      params: { dateQuery },
+    });
+    return response.data;
+  },
+  getActionItems: async ({ status }: { status: string }) => {
+    const response = await mettingAppApi.get("/meeting/actionitem/list", {
+      params: {
+        status,
+      },
+    });
+    return response.data;
+  },
+  markActionItemComplete: async (id: string) => {
+    const response = await mettingAppApi.patch(
+      `/meeting/actionitem/list/${id}`,
+    );
+    return response;
+  },
 };

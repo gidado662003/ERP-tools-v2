@@ -8,17 +8,14 @@ const defaultCategories = [
 
 const seedCategories = async () => {
   try {
-    const count = await Category.countDocuments();
-
-    // 👇 only seed if empty
-    if (count === 0) {
-      await Category.insertMany(defaultCategories);
-      console.log("✅ Default categories seeded");
-    } else {
-      console.log("ℹ️ Categories already exist, skipping seed");
-    }
+    await Category.insertMany(defaultCategories, { ordered: false });
+    console.log("✅ Default categories ensured");
   } catch (error) {
-    console.error("❌ Error seeding categories:", error.message);
+    if (error.code === 11000) {
+      console.log("ℹ️ Some categories already exist, skipping duplicates");
+    } else {
+      console.error("❌ Seeding error:", error.message);
+    }
   }
 };
 
