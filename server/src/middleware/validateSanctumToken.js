@@ -48,7 +48,7 @@ async function validateSanctumToken(req, res, next) {
         });
       }
 
-      req.user = req.user = {
+      req.user = {
         id: mongoUser._id,
         name: mongoUser.displayName || mongoUser.username,
         email: mongoUser.email,
@@ -58,7 +58,7 @@ async function validateSanctumToken(req, res, next) {
         },
       };
       req.userId = mongoUser._id.toString();
-
+      req.authUser = req.user;
       console.log("🧪 MOCK AUTH ACTIVE:", mongoUser.displayName);
 
       return next();
@@ -184,7 +184,13 @@ async function validateSanctumToken(req, res, next) {
       await mongoUser.save();
     }
 
-    req.userId = mongoUser._id.toString();
+    req.authUser = {
+      id: mongoUser._id.toString(),
+      name: mongoUser.displayName,
+      department: mongoUser.department,
+      laravelId: mongoUser.laravel_id,
+      role: mongoUser.role,
+    };
 
     next();
   } catch (err) {

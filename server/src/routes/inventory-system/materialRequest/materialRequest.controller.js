@@ -63,7 +63,7 @@ const materialRequestController = {
   },
   dispatchRequest: async (req, res) => {
     try {
-      const user = req.user;
+      const user = req.authUser ?? req.user;
       const materialRequest = await MaterialRequestService.dispatchRequest(
         req.params.id,
         user,
