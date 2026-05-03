@@ -25,7 +25,7 @@ const materialRequestController = {
 
   createMaterialRequest: async (req, res) => {
     try {
-      const user = req.user;
+      const user = req.authUser ?? req.user;
       const materialRequest =
         await MaterialRequestService.createMaterialRequest(req.body, user);
       res.status(201).json("materialRequest");
@@ -36,7 +36,7 @@ const materialRequestController = {
 
   approveRequest: async (req, res) => {
     try {
-      const user = req.user;
+      const user = req.authUser ?? req.user;
       const materialRequest = await MaterialRequestService.approveRequest(
         req.params.id,
         user,
@@ -49,7 +49,7 @@ const materialRequestController = {
   },
   rejectRequest: async (req, res) => {
     try {
-      const user = req.user;
+      const user = req.authUser ?? req.user;
       const materialRequest = await MaterialRequestService.rejectRequest(
         req.params.id,
         user,

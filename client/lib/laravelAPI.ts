@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const laravelAPI = axios.create({
   baseURL:
-    process.env.NEXT_PUBLIC_LARAVEL_API_URL || "http://localhost:8000/api",
+    process.env.NEXT_PUBLIC_LARAVEL_API_URL || "",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

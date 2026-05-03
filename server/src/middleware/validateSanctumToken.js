@@ -187,6 +187,7 @@ async function validateSanctumToken(req, res, next) {
     req.authUser = {
       id: mongoUser._id.toString(),
       name: mongoUser.displayName,
+      email: mongoUser.email,
       department: mongoUser.department,
       laravelId: mongoUser.laravel_id,
       role: mongoUser.role,
