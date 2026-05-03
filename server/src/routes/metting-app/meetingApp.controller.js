@@ -67,8 +67,8 @@ const getDashboardData = async (req, res) => {
 
 const getActionItems = async (req, res) => {
   try {
-    const user = req.user;
-    const query = req.query;
+    const user = req.authUser ??req.user;
+    const query =  req.query;
     const actionItems = await getActionItemService(user, query);
     res.status(200).json({ success: true, actionItems });
   } catch (error) {

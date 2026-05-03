@@ -37,6 +37,8 @@ const CLS = {
     "h-7 px-3 rounded-md text-[11px] font-medium border border-[#e0dfe3] bg-background hover:bg-[#EAF3DE] hover:text-[#3B6D11] hover:border-[#97C459]/60 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed dark:border-border/30 dark:hover:bg-[#173404] dark:hover:text-[#C0DD97] dark:hover:border-[#639922]/40",
   empty: "text-center py-16 text-[13px] text-muted-foreground",
   separator: "w-px h-4 bg-[#e0dfe3] dark:bg-border/30",
+  emptyTitle: "text-[15px] font-medium text-foreground mb-2",
+  emptySubtitle: "text-[13px] text-muted-foreground",
 };
 
 const FILTERS = [
@@ -82,6 +84,7 @@ export default function ActionItemPage({
   data: ActionItem[];
   status?: string;
 }) {
+  console.log("data", data);
   const setFilter = useSetFilter();
   const [completing, setCompleting] = useState<Set<string>>(new Set());
   const [items, setItems] = useState<ActionItem[]>(data);
@@ -90,6 +93,15 @@ export default function ActionItemPage({
   useEffect(() => {
     setItems(data);
   }, [data]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div className={CLS.empty}>
+        <p className={CLS.emptyTitle}>No action items found.</p>
+        <p className={CLS.emptySubtitle}>Action items from meetings will appear here.</p>
+      </div>
+    );
+  }
 
   async function handleComplete(id: string) {
     setCompleting((prev) => new Set(prev).add(id));
@@ -110,8 +122,8 @@ export default function ActionItemPage({
     }
   }
 
-  const overdueCount = items.filter(
-    (i) => i.status !== "completed" && new Date(i.due) < new Date(),
+  const overdueCount = items?.filter(
+    (i) => i?.status !== "completed" && new Date(i?.due) < new Date(),
   ).length;
 
   return (
@@ -121,7 +133,7 @@ export default function ActionItemPage({
         <div>
           <h1 className={CLS.title}>Action items</h1>
           <p className={CLS.subtitle}>
-            {items.length} total
+            {items?.length} total
             {overdueCount > 0 && (
               <span className="text-[#A32D2D] dark:text-[#F7C1C1]">
                 {" "}
@@ -148,10 +160,10 @@ export default function ActionItemPage({
       </div>
 
       {/* List */}
-      {items.length === 0 ? (
+      {items?.length === 0 ? (
         <div className={CLS.empty}>No action items found.</div>
       ) : (
-        items.map((item) => {
+        items?.map((item) => {
           const { cls: pillCls, label: pillLabel } = statusPill(
             item.status,
             item.due,

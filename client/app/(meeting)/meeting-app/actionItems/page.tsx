@@ -9,10 +9,10 @@ async function page({
 }) {
   const { status } = await searchParams;
   const data = await meetingServerAPI.getActionItems(status);
-  const actionItems = data  as ActionItem[];
+  const actionItems = data  as { actionItems: ActionItem[] };
   return (
     <div>
-      <ActionItemPage data={actionItems} status={status} />
+      <ActionItemPage data={actionItems.actionItems} status={status} />
     </div>
   );
 }

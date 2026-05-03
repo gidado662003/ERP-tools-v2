@@ -46,7 +46,13 @@ const statusConfig: Record<
 
 export default function MeetingPreviewCard({ meetings }: Props) {
   const now = new Date();
-
+if (!meetings || meetings.length === 0) {
+  return (
+    <div className="text-center text-[13px] text-[#80748d] dark:text-[#6b6080] py-8">
+      No meetings found.
+    </div>
+  );
+}
   return (
     <div className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
       {meetings.map((meeting) => {

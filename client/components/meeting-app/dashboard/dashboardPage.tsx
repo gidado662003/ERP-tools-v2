@@ -57,10 +57,10 @@ const pillStyle = (status: string, due?: string) => {
   };
 };
 
-const initials = (username: string) => username.slice(0, 2).toUpperCase();
+const initials = (username: string) => username?.slice(0, 2).toUpperCase();
 
 const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  new Date(iso??'').toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 const formatPenalty = (p?: string) => (p && p !== "N/A" && p !== "" ? p : null);
 
@@ -241,7 +241,14 @@ export default function MeetingDashboardPage({
               <div className="flex-1 min-w-0">
                 <div className={CLS.activityTitle}>{item.desc}</div>
                 <div className={CLS.activityMeta}>
-                  <span>{item.owner.map((o) => o.username).join(", ")}</span>
+                <span>
+  {Array.isArray(item.owner)
+    ? item.owner
+        .map((o) => o?.username)
+        .filter(Boolean)
+        .join(", ")
+    : ""}
+</span>
                   <span>·</span>
                   <span className={pillCls}>{pillLabel}</span>
                   <span>· due {formatDate(item.due)}</span>
