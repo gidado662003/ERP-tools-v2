@@ -74,7 +74,7 @@ async function getAllusers(req, res) {
     if (search) {
       filter = {
         $and: [
-          { email: { $ne: currentUserEmail } },
+          // { email: { $ne: currentUserEmail } },
           {
             $or: [
               { username: { $regex: search, $options: "i" } },
