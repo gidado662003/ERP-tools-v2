@@ -137,7 +137,7 @@ function UseAiBot() {
       try {
         const res = await fetch(
           `
-http://localhost:5001/api/user?search=${encodeURIComponent(query)}`,
+        ${process.env.NEXT_PUBLIC_NEXTJS_URL}/api/user?search=${encodeURIComponent(query)}`,
         );
         if (!res.ok) return [];
         const data = await res.json();

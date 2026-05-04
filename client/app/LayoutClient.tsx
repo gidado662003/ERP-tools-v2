@@ -26,10 +26,10 @@ export default function LayoutClient({
           }
         }
 
-        // ❌ Not authenticated → redirect
-        if (!user) {
-          window.location.href = process.env.NEXT_PUBLIC_LARAVEL as string;
-        }
+        // // ❌ Not authenticated → redirect
+        // if (!user) {
+        //   window.location.href = process.env.NEXT_PUBLIC_LARAVEL as string;
+        // }
       } catch (err) {
         window.location.href = process.env.NEXT_PUBLIC_LARAVEL as string;
       }
