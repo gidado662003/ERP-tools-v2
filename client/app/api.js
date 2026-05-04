@@ -15,12 +15,6 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("erp_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
   return config;
 });
 
@@ -28,13 +22,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - user must re-authenticate via Laravel ERP
-      console.log("Token expired - user must re-authenticate via Laravel ERP");
+      window.location.href = process.env.NEXT_PUBLIC_LARAVEL;
     }
     return Promise.reject(error);
   },
 );
-
 // Authentication API functions
 export const authAPI = {
   syncUserProfile: async () => {

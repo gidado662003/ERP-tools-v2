@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Module, ModuleResponse } from "./moduleType";
+import { Module, ModuleResponse, ModuleListResponse } from "./moduleType";
 const Api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
   headers: {
@@ -10,7 +10,7 @@ const Api = axios.create({
 
 export const moduleAppAPI = {
   getModules: async () => {
-    const response = await Api.get("/modules");
+    const response = await Api.get<ModuleListResponse>("/modules");
     return response.data;
   },
   createModule: async (data: Module) => {
