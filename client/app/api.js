@@ -254,3 +254,15 @@ export async function isAuthenticated() {
     throw error;
   }
 }
+
+export async function getDepartments(search) {
+  try {
+    const response = await api.get("/user/departments", {
+      params: search ? { search } : {},
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Get departments error:", error);
+    throw error;
+  }
+}

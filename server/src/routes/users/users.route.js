@@ -4,6 +4,7 @@ const {
   getAllusers,
   getUserById,
   isAuthenticated,
+  getDepartments,
 } = require("./users.controller");
 
 const route = express.Router();
@@ -13,8 +14,8 @@ route.post("/sync", syncUserProfile);
 
 // Protected routes (authentication required)
 route.get("/", getAllusers);
-route.get("/:id", getUserById);
-
+route.get("/departments", getDepartments);
 route.get("/is-authenticated", isAuthenticated);
+route.get("/:id", getUserById);
 
 module.exports = route;

@@ -131,4 +131,28 @@ async function getUserById(req, res) {
   }
 }
 
-module.exports = { syncUserProfile, getAllusers, getUserById, isAuthenticated };
+async function getDepartments(req, res) {
+  try {
+    const { search } = req.query;
+    const filter = {
+      department: { $ne: null },
+    };
+
+    if (search) {
+      filter.department = { $regex: search, $options: "i" };
+    }
+
+    const departments = await User.distinct("department", filter);
+    console.log(departments);
+    return res.status(200).json({ success: true, data: departments });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+module.exports = {
+  syncUserProfile,
+  getAllusers,
+  getUserById,
+  isAuthenticated,
+  getDepartments,
+};

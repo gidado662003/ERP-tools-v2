@@ -18,6 +18,7 @@ const Category = require("./internal-requisitions/category/category.route");
 const InternalDocuments = require("./internal-documents/documents/internal-documents.route");
 const InternalDocumentCategory = require("./internal-documents/catergory/internal-documents-category.route");
 const MaterialRequest = require("./inventory-system/materialRequest/materialRequest.routes");
+const Module = require("./erpLayoutDashboard/module/module.route");
 const routes = express.Router();
 
 routes.use("/admin", Admin);
@@ -39,5 +40,5 @@ routes.use("/categories", Category);
 routes.use("/document", InternalDocuments);
 routes.use("/document-categories", InternalDocumentCategory);
 routes.use("/material-requests", MaterialRequest);
-
+routes.use("/modules", Module);
 module.exports = routes;
