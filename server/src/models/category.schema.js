@@ -9,6 +9,21 @@ const categorySchema = new Schema({
     minlength: [2, "Category name must be at least 2 characters."],
     set: (value) => value.toLowerCase(),
   },
+
+  subCategories: [
+    {
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+      },
+      description: {
+        type: String,
+        trim: true,
+      },
+    },
+  ],
   description: {
     type: String,
     trim: true,

@@ -28,32 +28,7 @@ export const moduleServerAPI = {
   getModules: async (): Promise<ModuleListResponse> => {
     return serverFetch("/modules");
   },
-
-  getModuleById: async (id: string): Promise<Module> => {
-    const res = await serverFetch<ModuleResponse>(`/modules/${id}`);
-    return res.data;
-  },
-
-  createModule: async (data: Module): Promise<Module> => {
-    const res = await serverFetch<ModuleResponse>("/modules", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-    return res.data;
-  },
-
-  updateModule: async (id: string, data: Module): Promise<Module> => {
-    const res = await serverFetch<ModuleResponse>(`/modules/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-    return res.data;
-  },
-
-  deleteModule: async (id: string): Promise<Module> => {
-    const res = await serverFetch<ModuleResponse>(`/modules/${id}`, {
-      method: "DELETE",
-    });
-    return res.data;
+  getModulesAdmin: async (): Promise<ModuleListResponse> => {
+    return serverFetch("/admin/modules");
   },
 };

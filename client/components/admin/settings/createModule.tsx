@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Module, Department } from "@/lib/module/moduleType";
+import { Module } from "@/lib/module/moduleType";
 import { moduleAppAPI } from "@/lib/module/moduleApi";
 import * as Icons from "lucide-react";
 import { toast } from "sonner";
@@ -58,9 +58,8 @@ const CLS = {
     "h-9 w-full bg-[#6c5fc7] hover:bg-[#5b4fb5] text-white rounded-md text-[13px] font-medium cursor-pointer disabled:opacity-50 transition-colors border-0",
 };
 
-// Narrow allowedDepartments to Department[] only — strings are for API responses
 type ModuleForm = Omit<Module, "allowedDepartments"> & {
-  allowedDepartments: Department[];
+  allowedDepartments: string[];
 };
 
 const DEFAULT_MODULE: ModuleForm = {
@@ -98,7 +97,7 @@ export default function CreateModule() {
   const [module, setModule] = useState<ModuleForm>(DEFAULT_MODULE);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDeptName, setSelectedDeptName] = useState<string>("");
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [search, setSearch] = useState<string>("");
 
   useEffect(() => {
@@ -129,14 +128,13 @@ export default function CreateModule() {
 
   const addDepartment = () => {
     if (!selectedDeptName) return;
-    const dept: Department = { name: selectedDeptName };
     const already = module.allowedDepartments.some(
-      (d) => d.name === selectedDeptName,
+      (d) => d === selectedDeptName,
     );
     if (already) return;
     setModule((prev) => ({
       ...prev,
-      allowedDepartments: [...prev.allowedDepartments, dept],
+      allowedDepartments: [...prev.allowedDepartments, selectedDeptName],
     }));
     setSelectedDeptName("");
   };
@@ -144,9 +142,7 @@ export default function CreateModule() {
   const removeDepartment = (deptName: string) => {
     setModule((prev) => ({
       ...prev,
-      allowedDepartments: prev.allowedDepartments.filter(
-        (d) => d.name !== deptName,
-      ),
+      allowedDepartments: prev.allowedDepartments.filter((d) => d !== deptName),
     }));
   };
 
@@ -169,7 +165,7 @@ export default function CreateModule() {
 
   // Departments not yet selected
   const availableDepts = departments.filter(
-    (d) => !module.allowedDepartments.some((a) => a.name === d.name),
+    (d) => !module.allowedDepartments.some((a) => a === d),
   );
 
   return (
@@ -271,12 +267,12 @@ export default function CreateModule() {
                 No departments added — all users can access
               </span>
             ) : (
-              module.allowedDepartments.map((dept) => (
-                <span key={dept.name} className={CLS.deptChip}>
-                  {dept.name}
+              module.allowedDepartments.map((dept: string) => (
+                <span key={dept} className={CLS.deptChip}>
+                  {dept}
                   <span
                     className={CLS.deptChipX}
-                    onClick={() => removeDepartment(dept.name)}
+                    onClick={() => removeDepartment(dept)}
                   >
                     ×
                   </span>
@@ -293,8 +289,8 @@ export default function CreateModule() {
             >
               <option value="">Add department…</option>
               {availableDepts.map((d) => (
-                <option key={d.name} value={d.name}>
-                  {d.name}
+                <option key={d} value={d}>
+                  {d}
                 </option>
               ))}
             </select>

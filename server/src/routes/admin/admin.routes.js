@@ -1,7 +1,21 @@
 const express = require("express");
 const { adminLogin } = require("./admin.controller");
-const { getAllUsersAdmin, getUserByIdAdmin, createUserAdmin, updateUserAdmin, deleteUserAdmin } = require("./admin.user.controller");
-const { getAllChatsAdmin, getChatByIdAdmin, deleteChatAdmin, deleteMessageAdmin, getChatMessagesAdmin, undeleteMessageAdmin } = require("./admin.chat.controller");
+const {
+  getAllUsersAdmin,
+  getUserByIdAdmin,
+  createUserAdmin,
+  updateUserAdmin,
+  deleteUserAdmin,
+} = require("./admin.user.controller");
+const {
+  getAllChatsAdmin,
+  getChatByIdAdmin,
+  deleteChatAdmin,
+  deleteMessageAdmin,
+  getChatMessagesAdmin,
+  undeleteMessageAdmin,
+} = require("./admin.chat.controller");
+const moduleController = require("./admin.module.controller");
 // const { getSettingsAdmin, updateSettingsAdmin } = require("./admin.settings.controller");
 const adminAuth = require("../../middleware/adminAuth");
 
@@ -12,7 +26,7 @@ router.post("/login", adminLogin);
 
 // Authenticated Admin Routes
 router.get("/check-auth", adminAuth, (req, res) => {
-    res.status(200).json({ message: "Authenticated as admin" });
+  res.status(200).json({ message: "Authenticated as admin" });
 });
 
 // User Management Routes
@@ -27,11 +41,26 @@ router.get("/chats", adminAuth, getAllChatsAdmin);
 router.get("/chats/:id", adminAuth, getChatByIdAdmin);
 router.get("/chats/:chatId/messages", adminAuth, getChatMessagesAdmin);
 router.delete("/chats/:id", adminAuth, deleteChatAdmin);
-router.put("/chats/:chatId/messages/:messageId/soft-delete", adminAuth, deleteMessageAdmin);
-router.put("/chats/:chatId/messages/:messageId/undelete", adminAuth, undeleteMessageAdmin);
+router.put(
+  "/chats/:chatId/messages/:messageId/soft-delete",
+  adminAuth,
+  deleteMessageAdmin,
+);
+router.put(
+  "/chats/:chatId/messages/:messageId/undelete",
+  adminAuth,
+  undeleteMessageAdmin,
+);
 
 // // Application Settings Routes
 // router.get("/settings", adminAuth, getSettingsAdmin);
 // router.put("/settings", adminAuth, updateSettingsAdmin);
+
+// Module Management Routes
+router.get("/modules", adminAuth, moduleController.getModulesAdmin);
+router.post("/modules", adminAuth, moduleController.createModuleAdmin);
+router.put("/modules/:id", adminAuth, moduleController.updateModuleAdmin);
+router.delete("/modules/:id", adminAuth, moduleController.deleteModuleAdmin);
+router.get("/modules/:id", adminAuth, moduleController.getModuleByIdAdmin);
 
 module.exports = router;

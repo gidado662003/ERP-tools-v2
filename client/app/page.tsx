@@ -64,5 +64,12 @@ export default function Page() {
 
   if (!data) return null;
 
-  return <HomePage userName={data.userName} modules={data.modules} />;
+  return (
+    <HomePage
+      userName={data.userName}
+      modules={data.modules}
+      activity={data.activity}
+      stats={data.stats}
+    />
+  );
 }
